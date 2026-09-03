@@ -127,7 +127,8 @@ class SyncEngine {
         })
       });
 
-      if (response.ok) {
+      const contentType = response.headers.get('content-type') || '';
+      if (response.ok && contentType.includes('application/json')) {
         const result = await response.json();
         const ackSyncIds: string[] = result.acknowledgedSyncIds || items.map(i => i.syncId);
 
@@ -315,7 +316,8 @@ class SyncEngine {
   public async getCloudStatus(): Promise<{ connected: boolean; statusData?: any }> {
     try {
       const res = await fetch(`${API_BASE_URL}/api/sync/status`);
-      if (res.ok) {
+      const contentType = res.headers.get('content-type') || '';
+      if (res.ok && contentType.includes('application/json')) {
         const data = await res.json();
         return { connected: true, statusData: data };
       }
@@ -331,7 +333,8 @@ class SyncEngine {
   public async getAllCloudData(): Promise<{ success: boolean; data?: any; error?: string }> {
     try {
       const res = await fetch(`${API_BASE_URL}/api/sync/all`);
-      if (res.ok) {
+      const contentType = res.headers.get('content-type') || '';
+      if (res.ok && contentType.includes('application/json')) {
         const data = await res.json();
         return { success: true, data };
       }

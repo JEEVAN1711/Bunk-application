@@ -229,7 +229,15 @@ export const DutyClosingPage: React.FC<{ onNavigate: (page: string) => void }> =
   }
 
   const handleFinalizeShift = async () => {
-    if (!activeDuty || !actualCashInHand) return;
+    if (!activeDuty) {
+      alert('No active duty shift found to close.');
+      return;
+    }
+
+    if (actualCashInHand === '' || actualCashInHand === undefined) {
+      alert('Please enter the physical cash counted in hand in Step 3 (enter ₹0 or your counted cash amount) before finalizing.');
+      return;
+    }
 
     setIsClosing(true);
     try {
@@ -257,13 +265,20 @@ export const DutyClosingPage: React.FC<{ onNavigate: (page: string) => void }> =
       setWhatsappMessage(msg);
 
       // Automatically generate & download the complete Shift Excel / CSV sheet!
-      downloadShiftExcelCSV(closed, readings);
+      try {
+        downloadShiftExcelCSV(closed, readings);
+      } catch (err) {
+        console.warn('Auto-download CSV warning:', err);
+      }
 
       confetti({
         particleCount: 60,
         spread: 80,
         origin: { y: 0.6 }
       });
+    } catch (err: any) {
+      console.error('Finalize Shift Error:', err);
+      alert('Failed to finalize shift: ' + (err.message || 'Unknown error. Please try again.'));
     } finally {
       setIsClosing(false);
     }
