@@ -151,6 +151,12 @@ export async function seedInitialData() {
     }
   }
 
+  // Clean up any legacy hardcoded demo active shifts
+  const legacyShift = await db.dutyShifts.get('shift-morning-1');
+  if (legacyShift) {
+    await db.dutyShifts.delete('shift-morning-1');
+  }
+
   const userCount = await db.users.count();
   if (userCount === 0) {
     await restoreDemoCredentials();
@@ -171,67 +177,6 @@ export async function seedInitialData() {
           role: u.role,
           active: true
         });
-      }
-    }
-
-    // Ensure default active shift and sample past shifts for monthly attendance reporting
-    const shiftCount = await db.dutyShifts.count();
-    if (shiftCount <= 1) {
-      const now = Date.now();
-      const pastShifts: DutyShift[] = [
-        {
-          id: 'shift-past-1',
-          shiftNumber: 'SHIFT-2026-088',
-          cashierId: 'u-cashier-mani',
-          cashierName: 'Manishanker',
-          supportCashierId: 'u-cashier-selvam',
-          supportCashierName: 'Selvam',
-          startTime: new Date(now - 48 * 3600 * 1000).toISOString(),
-          endTime: new Date(now - 40 * 3600 * 1000).toISOString(),
-          status: 'CLOSED',
-          notes: 'Full day shift completed smoothly',
-          synced: false
-        },
-        {
-          id: 'shift-past-2',
-          shiftNumber: 'SHIFT-2026-089',
-          cashierId: 'u-cashier-selvam',
-          cashierName: 'Selvam',
-          supportCashierId: 'u-cashier-mani',
-          supportCashierName: 'Manishanker',
-          startTime: new Date(now - 24 * 3600 * 1000).toISOString(),
-          endTime: new Date(now - 16 * 3600 * 1000).toISOString(),
-          status: 'CLOSED',
-          notes: 'Evening high-traffic shift reconciled',
-          synced: false
-        }
-      ];
-
-      for (const ps of pastShifts) {
-        const exists = await db.dutyShifts.get(ps.id);
-        if (!exists) {
-          await db.dutyShifts.put(ps);
-          const pastClosing: DutyClosing = {
-            id: 'close-' + ps.id,
-            dutyId: ps.id,
-            shiftNumber: ps.shiftNumber,
-            cashierId: ps.cashierId,
-            cashierName: ps.cashierName,
-            closedByAdminId: 'u-admin-default',
-            closedByAdminName: 'Jeevan (Admin & Owner)',
-            grossFuelSalesAmount: 168400,
-            creditGivenAmount: 18000,
-            creditPaymentsCollected: 12000,
-            expectedCashBalance: 162400,
-            actualCashInHand: 162400,
-            differenceAmount: 0,
-            closingStatus: 'MATCHED',
-            closedAt: ps.endTime || new Date().toISOString(),
-            isLocked: true,
-            synced: false
-          };
-          await db.dutyClosings.put(pastClosing);
-        }
       }
     }
   }
@@ -271,31 +216,8 @@ export async function restoreDemoCredentials() {
       });
     }
 
-    // Ensure default active shift if none exists
-    const shiftCount = await db.dutyShifts.count();
-    if (shiftCount === 0) {
-      const defaultDuty: DutyShift = {
-        id: 'shift-morning-1',
-        shiftNumber: 'SHIFT-2026-001',
-        cashierId: 'u-cashier-mani',
-        cashierName: 'Manishanker',
-        supportCashierId: 'u-cashier-selvam',
-        supportCashierName: 'Selvam',
-        startTime: new Date(Date.now() - 4 * 3600 * 1000).toISOString(),
-        status: 'ACTIVE',
-        notes: 'Morning high-capacity duty shift',
-        synced: false
-      };
-      await db.dutyShifts.put(defaultDuty);
-      await db.syncQueue.add({
-        entityType: 'DUTY',
-        action: 'CREATE',
-        syncId: defaultDuty.id,
-        payload: defaultDuty,
-        timestamp: new Date().toISOString(),
-        attempts: 0
-      });
-    }
+    // Note: No active duty shifts are seeded by default.
+    // Active duty shifts must only be initiated by the Station Admin.
 
     // Ensure default tank stock record if none exists
     const tankCount = await db.tankStocks.count();
