@@ -104,7 +104,7 @@ export const StaffManagementPage: React.FC = () => {
       synced: false
     };
 
-    await db.users.add(newUser);
+    await db.users.put(newUser);
     await syncEngine.enqueue('USER', 'CREATE', id, newUser);
     await syncEngine.syncAllLocalDataToCloud();
     await refreshUsers();

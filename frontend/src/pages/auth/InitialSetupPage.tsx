@@ -41,7 +41,7 @@ export const InitialSetupPage: React.FC = () => {
         synced: false
       };
 
-      await db.users.add(adminUser);
+      await db.users.put(adminUser);
       await db.pricing.put({
         id: 'current',
         pricing: {

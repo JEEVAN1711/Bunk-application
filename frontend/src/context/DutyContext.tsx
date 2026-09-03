@@ -112,7 +112,7 @@ export const DutyProvider: React.FC<{ children: React.ReactNode }> = ({ children
       synced: false
     };
 
-    await db.dutyShifts.add(newShift);
+    await db.dutyShifts.put(newShift);
 
     // Define the full set of 4 Petrol, 4 Diesel, and 1 Oil pump dispensers
     const pumpDefinitions: { pumpNumber: string; productType: ProductType; defaultStart: number }[] = [
@@ -160,7 +160,7 @@ export const DutyProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
     });
 
-    await db.fuelReadings.bulkAdd(initialReadings);
+    await db.fuelReadings.bulkPut(initialReadings);
 
     await syncEngine.enqueue('DUTY', 'CREATE', newShift.id, newShift);
     setActiveDuty(newShift);
@@ -180,7 +180,7 @@ export const DutyProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     await db.transaction('rw', [db.creditEntries, db.customers], async () => {
-      await db.creditEntries.add(newCredit);
+      await db.creditEntries.put(newCredit);
 
       // Update customer ledger
       const customer = await db.customers.get(entry.customerId);
@@ -210,7 +210,7 @@ export const DutyProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     await db.transaction('rw', [db.paymentEntries, db.customers], async () => {
-      await db.paymentEntries.add(newPayment);
+      await db.paymentEntries.put(newPayment);
 
       // Update customer ledger
       const customer = await db.customers.get(entry.customerId);
@@ -239,7 +239,7 @@ export const DutyProvider: React.FC<{ children: React.ReactNode }> = ({ children
       synced: false
     };
 
-    await db.expenseEntries.add(newExpense);
+    await db.expenseEntries.put(newExpense);
     await syncEngine.enqueue('EXPENSE', 'CREATE', id, newExpense);
     return newExpense;
   };
@@ -277,7 +277,7 @@ export const DutyProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     await db.transaction('rw', [db.dutyClosings, db.dutyShifts, db.fuelReadings], async () => {
-      await db.dutyClosings.add(dutyClosing);
+      await db.dutyClosings.put(dutyClosing);
       await db.dutyShifts.update(closing.dutyId, {
         status: 'CLOSED',
         endTime: dutyClosing.closedAt
@@ -370,7 +370,7 @@ export const DutyProvider: React.FC<{ children: React.ReactNode }> = ({ children
       synced: false
     };
 
-    await db.paymentRequests.add(req);
+    await db.paymentRequests.put(req);
     await syncEngine.enqueue('PAYMENT_REQUEST', 'CREATE', id, req);
     return req;
   };
