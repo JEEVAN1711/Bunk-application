@@ -51,9 +51,14 @@ export const DutyProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [pricing, setPricing] = useState<ProductPricing>(DEFAULT_PRICES);
 
   const refreshDutyData = useCallback(async () => {
-    // Fetch active duty
-    const active = await db.dutyShifts.filter(d => d.status === 'ACTIVE').first();
-    setActiveDuty(active || null);
+    // Fetch active duty - get the most recent ACTIVE shift across cloud and local DB
+    const allShifts = await db.dutyShifts.toArray();
+    const activeShifts = allShifts
+      .filter(d => (d.status || '').toUpperCase() === 'ACTIVE')
+      .sort((a, b) => new Date(b.startTime || 0).getTime() - new Date(a.startTime || 0).getTime());
+
+    const active = activeShifts.length > 0 ? activeShifts[0] : null;
+    setActiveDuty(active);
 
     // Fetch pricing
     const savedPrice = await db.pricing.get('current');
@@ -69,6 +74,11 @@ export const DutyProvider: React.FC<{ children: React.ReactNode }> = ({ children
       refreshDutyData();
     });
 
+    // Fast 2-second background check to catch multi-device shifts seamlessly
+    const interval = setInterval(() => {
+      refreshDutyData();
+    }, 2000);
+
     // Listen to background sync updates across tabs and cloud polling
     const handleSync = () => {
       refreshDutyData();
@@ -76,6 +86,7 @@ export const DutyProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     window.addEventListener('bunk_cloud_synced', handleSync);
     return () => {
+      clearInterval(interval);
       window.removeEventListener('bunk_cloud_synced', handleSync);
     };
   }, [refreshDutyData]);

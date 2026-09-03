@@ -136,9 +136,9 @@ export const CreditModal: React.FC<CreditModalProps> = ({
       isAdmin ||
       currentUser?.id === activeDuty.cashierId ||
       currentUser?.id === activeDuty.supportCashierId ||
-      currentUser?.fullName === activeDuty.cashierName ||
-      currentUser?.fullName === activeDuty.supportCashierName ||
-      currentUser?.username === activeDuty.cashierName?.toLowerCase().trim()
+      (currentUser?.fullName && activeDuty.cashierName && currentUser.fullName.toLowerCase().trim() === activeDuty.cashierName.toLowerCase().trim()) ||
+      (currentUser?.fullName && activeDuty.supportCashierName && currentUser.fullName.toLowerCase().trim() === activeDuty.supportCashierName.toLowerCase().trim()) ||
+      (currentUser?.username && activeDuty.cashierName && currentUser.username.toLowerCase().trim() === activeDuty.cashierName.toLowerCase().trim())
     );
 
     if (!isAssigned) {
