@@ -1,0 +1,34 @@
+# Operating System Files
+.DS_Store
+Thumbs.db
+*.log
+hs_err_pid*
+
+# Node / Frontend
+**/node_modules/
+**/dist/
+**/build/
+.env
+.env.local
+.env.*.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Java / Maven / Backend
+**/target/
+**/.mvn/wrapper/maven-wrapper.jar
+**/*.class
+**/data/
+*.h2.db
+*.trace.db
+
+# IDEs
+.idea/
+*.iml
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

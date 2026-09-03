@@ -1,0 +1,26 @@
+services:
+  # Spring Boot Backend Web Service
+  - type: web
+    name: bunk-management-backend
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /api/sync/status
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: bunk-postgres-db
+          property: connectionString
+      - key: DATABASE_DRIVER
+        value: org.postgresql.Driver
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      - key: FAST2SMS_API_KEY
+        value: KfWMvE2Id76x1XAtjTQPsO9kUlriCHoJbc5a8Y4ezpn0NwRyGF9yNlarVRXWGDv6bKgmJ7sfCHhLTdAB
+
+databases:
+  # Cloud Managed PostgreSQL Database
+  - name: bunk-postgres-db
+    databaseName: bunk_db
+    user: bunk_user
+    plan: free

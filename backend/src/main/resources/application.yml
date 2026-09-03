@@ -1,0 +1,40 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: bunk-management-service
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://ep-royal-leaf-ax5uxvri-pooler.c-4.us-east-2.aws.neon.tech:5432/neondb?sslmode=require}
+    driver-class-name: ${DATABASE_DRIVER:org.postgresql.Driver}
+    username: ${DATABASE_USERNAME:neondb_owner}
+    password: ${DATABASE_PASSWORD:npg_G3lmjgD2LJeb}
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      idle-timeout: 30000
+      max-lifetime: 600000
+      connection-timeout: 20000
+  h2:
+    console:
+      enabled: false
+      path: /h2-console
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+
+app:
+  jwt:
+    secret: "bunk_secure_super_secret_signing_key_32_bytes_long_min_2026_enterprise_station"
+    expiration-ms: 86400000 # 24 hours
+  sms:
+    fast2sms-api-key: ${FAST2SMS_API_KEY:KfWMvE2Id76x1XAtjTQPsO9kUlriCHoJbc5a8Y4ezpn0NwRyGF9yNlarVRXWGDv6bKgmJ7sfCHhLTdAB}
+
+logging:
+  level:
+    root: INFO
+    com.bunk.management: DEBUG

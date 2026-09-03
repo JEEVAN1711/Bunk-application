@@ -1,0 +1,39 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: bunk_postgres_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: bunk_db
+      POSTGRES_USER: bunk_user
+      POSTGRES_PASSWORD: bunk_secure_pass_2026
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bunk_user -d bunk_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: bunk_backend_api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: jdbc:postgresql://postgres:5432/bunk_db
+      DATABASE_USERNAME: bunk_user
+      DATABASE_PASSWORD: bunk_secure_pass_2026
+      SPRING_PROFILES_ACTIVE: prod
+    ports:
+      - "8080:8080"
+
+volumes:
+  postgres_data:
+    driver: local
