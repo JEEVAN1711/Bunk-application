@@ -13,14 +13,24 @@ const SyncContext = createContext<SyncContextType | undefined>(undefined);
 export const SyncProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [status, setStatus] = useState<SyncState>(navigator.onLine ? 'ONLINE' : 'OFFLINE');
   const [pendingCount, setPendingCount] = useState<number>(0);
+  const [isOnline, setIsOnline] = useState<boolean>(typeof navigator !== 'undefined' ? navigator.onLine : true);
 
   useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
     const unsubscribe = syncEngine.subscribe((newStatus, count) => {
       setStatus(newStatus);
       setPendingCount(count);
     });
 
-    return () => unsubscribe();
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+      unsubscribe();
+    };
   }, []);
 
   const triggerSync = async () => {
@@ -33,7 +43,7 @@ export const SyncProvider: React.FC<{ children: React.ReactNode }> = ({ children
         status,
         pendingCount,
         triggerSync,
-        isOnline: status !== 'OFFLINE'
+        isOnline
       }}
     >
       {children}
