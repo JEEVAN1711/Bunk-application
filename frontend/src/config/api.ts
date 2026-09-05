@@ -1,5 +1,5 @@
 // Central API configuration for local and cloud environments
-export const DEFAULT_CLOUD_API_URL = 'https://bunk-application-2.onrender.com';
+export const DEFAULT_CLOUD_API_URL = 'https://bunk-application-4.onrender.com';
 
 export const getApiBaseUrl = (): string => {
   if (typeof window !== 'undefined') {
