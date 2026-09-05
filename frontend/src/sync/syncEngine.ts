@@ -1,6 +1,7 @@
 import { db } from '../db/db';
 import { SyncQueueItem } from '../types';
 import { API_BASE_URL } from '../config/api';
+import './realtime';
 
 export type SyncState = 'ONLINE' | 'OFFLINE' | 'SYNCING' | 'ERROR';
 
@@ -142,7 +143,9 @@ class SyncEngine {
           db.dutyClosings,
           db.customers,
           db.dutyShifts,
-          db.paymentRequests
+          db.paymentRequests,
+          db.expenseEntries,
+          db.tankStocks
         ], async () => {
           for (const item of items) {
             if (ackSyncIds.includes(item.syncId)) {
@@ -165,6 +168,10 @@ class SyncEngine {
                 await db.dutyShifts.update(item.syncId, { synced: true });
               } else if (item.entityType === 'PAYMENT_REQUEST') {
                 await db.paymentRequests.update(item.syncId, { synced: true });
+              } else if (item.entityType === 'EXPENSE') {
+                await db.expenseEntries.update(item.syncId, { synced: true });
+              } else if (item.entityType === 'TANK_STOCK') {
+                await db.tankStocks.update(item.syncId, { synced: true });
               }
             }
           }
@@ -223,7 +230,9 @@ class SyncEngine {
         credits,
         payments,
         closings,
-        paymentRequests
+        paymentRequests,
+        expenses,
+        tankStocks
       ] = await Promise.all([
         db.users.toArray(),
         db.customers.toArray(),
@@ -232,7 +241,9 @@ class SyncEngine {
         db.creditEntries.toArray(),
         db.paymentEntries.toArray(),
         db.dutyClosings.toArray(),
-        db.paymentRequests.toArray()
+        db.paymentRequests.toArray(),
+        db.expenseEntries.toArray(),
+        db.tankStocks.toArray()
       ]);
 
       const allItems: { syncId: string; entityType: SyncQueueItem['entityType']; action: SyncQueueItem['action']; timestamp: string; payload: any }[] = [];
@@ -245,6 +256,8 @@ class SyncEngine {
       payments.forEach(p => allItems.push({ syncId: p.id, entityType: 'PAYMENT', action: 'CREATE', timestamp: p.timestamp || new Date().toISOString(), payload: p }));
       closings.forEach(cl => allItems.push({ syncId: cl.id, entityType: 'DUTY_CLOSING', action: 'CREATE', timestamp: cl.closedAt || new Date().toISOString(), payload: cl }));
       paymentRequests.forEach(pr => allItems.push({ syncId: pr.id, entityType: 'PAYMENT_REQUEST', action: 'CREATE', timestamp: pr.sentAt || new Date().toISOString(), payload: pr }));
+      expenses.forEach(e => allItems.push({ syncId: e.id, entityType: 'EXPENSE', action: 'CREATE', timestamp: e.timestamp || new Date().toISOString(), payload: e }));
+      tankStocks.forEach(t => allItems.push({ syncId: t.id, entityType: 'TANK_STOCK', action: 'CREATE', timestamp: t.timestamp || new Date().toISOString(), payload: t }));
 
       if (allItems.length === 0) {
         this.currentStatus = 'ONLINE';
@@ -283,6 +296,8 @@ class SyncEngine {
         db.paymentEntries,
         db.dutyClosings,
         db.paymentRequests,
+        db.expenseEntries,
+        db.tankStocks,
         db.syncQueue
       ], async () => {
         await Promise.all([
@@ -294,6 +309,8 @@ class SyncEngine {
           db.paymentEntries.toCollection().modify({ synced: true }),
           db.dutyClosings.toCollection().modify({ synced: true }),
           db.paymentRequests.toCollection().modify({ synced: true }),
+          db.expenseEntries.toCollection().modify({ synced: true }),
+          db.tankStocks.toCollection().modify({ synced: true }),
           db.syncQueue.clear()
         ]);
       });
@@ -364,7 +381,9 @@ class SyncEngine {
         db.creditEntries,
         db.paymentEntries,
         db.dutyClosings,
-        db.paymentRequests
+        db.paymentRequests,
+        db.expenseEntries,
+        db.tankStocks
       ], async () => {
         // Hydrate Users
         if (Array.isArray(cloudData.users) && cloudData.users.length > 0) {
@@ -537,6 +556,48 @@ class SyncEngine {
               sentByAdminId: pr.sentByAdminId,
               status: pr.status,
               sentAt: pr.sentAt,
+              synced: true
+            });
+          }
+        }
+
+        // Hydrate Expense Entries
+        if (Array.isArray(cloudData.expenseEntries) && cloudData.expenseEntries.length > 0) {
+          for (const exp of cloudData.expenseEntries) {
+            await db.expenseEntries.put({
+              id: exp.id,
+              dutyId: exp.dutyId,
+              cashierId: exp.cashierId,
+              cashierName: exp.cashierName,
+              title: exp.title,
+              category: exp.category,
+              amount: Number(exp.amount || 0),
+              notes: exp.notes,
+              timestamp: exp.timestamp,
+              synced: true
+            });
+          }
+        }
+
+        // Hydrate Tank Stocks
+        if (Array.isArray(cloudData.tankStocks) && cloudData.tankStocks.length > 0) {
+          for (const st of cloudData.tankStocks) {
+            await db.tankStocks.put({
+              id: st.id,
+              date: st.date,
+              period: st.period,
+              shiftName: st.shiftName,
+              msAtgDipLevel: st.msAtgDipLevel,
+              msAtgStock: Number(st.msAtgStock || 0),
+              msTankDipLevel: st.msTankDipLevel,
+              msTankDipStock: Number(st.msTankDipStock || 0),
+              hsdAtgDipLevel: st.hsdAtgDipLevel,
+              hsdAtgStock: Number(st.hsdAtgStock || 0),
+              hsdTankDipLevel: st.hsdTankDipLevel,
+              hsdTankDipStock: Number(st.hsdTankDipStock || 0),
+              recordedByAdminId: st.recordedByAdminId,
+              recordedByAdminName: st.recordedByAdminName,
+              timestamp: st.timestamp,
               synced: true
             });
           }

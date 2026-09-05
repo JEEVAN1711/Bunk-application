@@ -170,6 +170,15 @@ export const DutyClosingPage: React.FC<{ onNavigate: (page: string) => void }> =
 
   useEffect(() => {
     loadShiftData();
+    const interval = setInterval(loadShiftData, 2000);
+    const handleLiveSync = () => {
+      loadShiftData();
+    };
+    window.addEventListener('bunk_cloud_synced', handleLiveSync);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('bunk_cloud_synced', handleLiveSync);
+    };
   }, [activeDuty]);
 
   const handleMeterChange = async (

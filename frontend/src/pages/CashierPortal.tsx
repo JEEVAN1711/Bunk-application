@@ -47,7 +47,14 @@ export const CashierPortal: React.FC = () => {
   useEffect(() => {
     loadShiftData();
     const interval = setInterval(loadShiftData, 2000);
-    return () => clearInterval(interval);
+    const handleLiveSync = () => {
+      loadShiftData();
+    };
+    window.addEventListener('bunk_cloud_synced', handleLiveSync);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('bunk_cloud_synced', handleLiveSync);
+    };
   }, [activeDuty]);
 
   const totalCreditInShift = shiftCredits.reduce((s, c) => s + (c.totalAmount || 0), 0);

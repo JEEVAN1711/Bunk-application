@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User } from '../types';
 import { db, seedInitialData, DEFAULT_USERS } from '../db/db';
 import { syncEngine } from '../sync/syncEngine';
+import { realtimeManager } from '../sync/realtime';
 
 interface AuthContextType {
   currentUser: User | null;
@@ -156,6 +157,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setCurrentUser(user);
     localStorage.setItem('bunk_active_user_id', user.id);
     localStorage.setItem('bunk_active_user_data', JSON.stringify(user));
+    realtimeManager.broadcastPresence({
+      userId: user.id,
+      username: user.username,
+      fullName: user.fullName,
+      role: user.role,
+      action: 'LOGIN',
+      deviceInfo: navigator.userAgent
+    });
   };
 
   const login = async (username: string, password?: string): Promise<boolean> => {
@@ -173,10 +182,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setCurrentUser(user);
       localStorage.setItem('bunk_active_user_id', user.id);
       localStorage.setItem('bunk_active_user_data', JSON.stringify(user));
+      realtimeManager.broadcastPresence({
+        userId: user.id,
+        username: user.username,
+        fullName: user.fullName,
+        role: user.role,
+        action: 'LOGIN',
+        deviceInfo: navigator.userAgent
+      });
     }
   };
 
   const logout = () => {
+    if (currentUser) {
+      realtimeManager.broadcastPresence({
+        userId: currentUser.id,
+        username: currentUser.username,
+        fullName: currentUser.fullName,
+        role: currentUser.role,
+        action: 'LOGOUT',
+        deviceInfo: navigator.userAgent
+      });
+    }
     setCurrentUser(null);
     localStorage.removeItem('bunk_active_user_id');
     localStorage.removeItem('bunk_active_user_data');

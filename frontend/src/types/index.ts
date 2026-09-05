@@ -176,7 +176,7 @@ export interface PaymentRequest {
 
 export interface SyncQueueItem {
   id?: number;
-  entityType: 'CREDIT' | 'PAYMENT' | 'CUSTOMER' | 'DUTY' | 'READING' | 'DUTY_CLOSING' | 'PAYMENT_REQUEST' | 'USER' | 'EXPENSE';
+  entityType: 'CREDIT' | 'PAYMENT' | 'CUSTOMER' | 'DUTY' | 'READING' | 'DUTY_CLOSING' | 'PAYMENT_REQUEST' | 'USER' | 'EXPENSE' | 'TANK_STOCK';
   action: 'CREATE' | 'UPDATE' | 'DELETE';
   payload: any;
   syncId: string;

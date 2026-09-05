@@ -45,7 +45,14 @@ export const CustomerPortal: React.FC = () => {
 
     loadCustomerData();
     const interval = setInterval(loadCustomerData, 3000);
-    return () => clearInterval(interval);
+    const handleLiveSync = () => {
+      loadCustomerData();
+    };
+    window.addEventListener('bunk_cloud_synced', handleLiveSync);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('bunk_cloud_synced', handleLiveSync);
+    };
   }, [currentUser]);
 
   if (!customer) {

@@ -26,6 +26,9 @@ public class SyncService {
     private final PaymentRequestRepository paymentRequestRepository;
     private final UserRepository userRepository;
     private final AuditLogRepository auditLogRepository;
+    private final ExpenseEntryRepository expenseEntryRepository;
+    private final TankStockEntryRepository tankStockEntryRepository;
+    private final SseService sseService;
 
     @Transactional
     public SyncBatchResponse processBatch(SyncBatchRequest request) {
@@ -41,13 +44,22 @@ public class SyncService {
             }
         }
 
-        return SyncBatchResponse.builder()
+        SyncBatchResponse response = SyncBatchResponse.builder()
                 .batchId(request.getBatchId())
                 .success(true)
                 .processedCount(acknowledgedIds.size())
                 .acknowledgedSyncIds(acknowledgedIds)
                 .message("Sync batch processed successfully")
                 .build();
+
+        // Broadcast real-time sync notification to all connected devices immediately
+        sseService.broadcast("SYNC_UPDATE", Map.of(
+                "batchId", request.getBatchId() != null ? request.getBatchId() : "batch-" + System.currentTimeMillis(),
+                "count", acknowledgedIds.size(),
+                "timestamp", System.currentTimeMillis()
+        ));
+
+        return response;
     }
 
     private void processSingleItem(SyncItemDTO item) {
@@ -62,6 +74,8 @@ public class SyncService {
                 case "PAYMENT" -> paymentEntryRepository.deleteById(item.getSyncId());
                 case "DUTY" -> dutyShiftRepository.deleteById(item.getSyncId());
                 case "PAYMENT_REQUEST" -> paymentRequestRepository.deleteById(item.getSyncId());
+                case "EXPENSE" -> expenseEntryRepository.deleteById(item.getSyncId());
+                case "TANK_STOCK" -> tankStockEntryRepository.deleteById(item.getSyncId());
             }
             return;
         }
@@ -299,6 +313,39 @@ public class SyncService {
                     paymentRequestRepository.save(req);
                 }
             }
+            case "EXPENSE" -> {
+                String id = item.getSyncId();
+                BigDecimal amount = new BigDecimal(p.get("amount") != null ? p.get("amount").toString() : "0");
+                ExpenseEntry exp = expenseEntryRepository.findById(id).orElseGet(() -> ExpenseEntry.builder().id(id).build());
+                exp.setDutyId((String) p.get("dutyId"));
+                exp.setCashierId((String) p.get("cashierId"));
+                exp.setCashierName((String) p.get("cashierName"));
+                exp.setTitle((String) p.get("title"));
+                exp.setCategory((String) p.get("category"));
+                exp.setAmount(amount);
+                exp.setNotes((String) p.get("notes"));
+                exp.setTimestamp(LocalDateTime.now());
+                expenseEntryRepository.save(exp);
+            }
+            case "TANK_STOCK" -> {
+                String id = item.getSyncId();
+                TankStockEntry stock = tankStockEntryRepository.findById(id).orElseGet(() -> TankStockEntry.builder().id(id).build());
+                stock.setDate((String) p.get("date"));
+                stock.setPeriod((String) p.get("period"));
+                stock.setShiftName((String) p.get("shiftName"));
+                stock.setMsAtgDipLevel(p.get("msAtgDipLevel") != null ? p.get("msAtgDipLevel").toString() : null);
+                if (p.get("msAtgStock") != null) stock.setMsAtgStock(new BigDecimal(p.get("msAtgStock").toString()));
+                stock.setMsTankDipLevel(p.get("msTankDipLevel") != null ? p.get("msTankDipLevel").toString() : null);
+                if (p.get("msTankDipStock") != null) stock.setMsTankDipStock(new BigDecimal(p.get("msTankDipStock").toString()));
+                stock.setHsdAtgDipLevel(p.get("hsdAtgDipLevel") != null ? p.get("hsdAtgDipLevel").toString() : null);
+                if (p.get("hsdAtgStock") != null) stock.setHsdAtgStock(new BigDecimal(p.get("hsdAtgStock").toString()));
+                stock.setHsdTankDipLevel(p.get("hsdTankDipLevel") != null ? p.get("hsdTankDipLevel").toString() : null);
+                if (p.get("hsdTankDipStock") != null) stock.setHsdTankDipStock(new BigDecimal(p.get("hsdTankDipStock").toString()));
+                stock.setRecordedByAdminId((String) p.get("recordedByAdminId"));
+                stock.setRecordedByAdminName((String) p.get("recordedByAdminName"));
+                stock.setTimestamp(LocalDateTime.now());
+                tankStockEntryRepository.save(stock);
+            }
         }
     }
 
@@ -312,6 +359,8 @@ public class SyncService {
         status.put("paymentEntriesCount", paymentEntryRepository.count());
         status.put("dutyClosingsCount", dutyClosingRepository.count());
         status.put("paymentRequestsCount", paymentRequestRepository.count());
+        status.put("expenseEntriesCount", expenseEntryRepository.count());
+        status.put("tankStocksCount", tankStockEntryRepository.count());
         status.put("auditLogsCount", auditLogRepository.count());
         status.put("cloudConnected", true);
         status.put("serverTime", LocalDateTime.now().toString());
@@ -328,6 +377,8 @@ public class SyncService {
         allData.put("paymentEntries", paymentEntryRepository.findAll());
         allData.put("dutyClosings", dutyClosingRepository.findAll());
         allData.put("paymentRequests", paymentRequestRepository.findAll());
+        allData.put("expenseEntries", expenseEntryRepository.findAll());
+        allData.put("tankStocks", tankStockEntryRepository.findAll());
         return allData;
     }
 
@@ -341,6 +392,8 @@ public class SyncService {
         userRepository.findAll().stream()
                 .filter(u -> u.getRole() == Role.CUSTOMER)
                 .forEach(userRepository::delete);
+
+        sseService.broadcast("SYNC_UPDATE", Map.of("action", "CLEAR_CUSTOMERS", "timestamp", System.currentTimeMillis()));
     }
 
     @org.springframework.transaction.annotation.Transactional
@@ -353,9 +406,13 @@ public class SyncService {
         dutyClosingRepository.deleteAll();
         dutyShiftRepository.deleteAll();
         customerRepository.deleteAll();
+        expenseEntryRepository.deleteAll();
+        tankStockEntryRepository.deleteAll();
         auditLogRepository.deleteAll();
         userRepository.findAll().stream()
                 .filter(u -> u.getRole() == Role.CUSTOMER)
                 .forEach(userRepository::delete);
+
+        sseService.broadcast("SYNC_UPDATE", Map.of("action", "RESET_DATABASE", "timestamp", System.currentTimeMillis()));
     }
 }

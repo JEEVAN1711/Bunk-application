@@ -74,7 +74,14 @@ export const AdminDashboard: React.FC<{ onNavigate: (page: string) => void }> = 
   useEffect(() => {
     loadData();
     const interval = setInterval(loadData, 3000);
-    return () => clearInterval(interval);
+    const handleLiveSync = () => {
+      loadData();
+    };
+    window.addEventListener('bunk_cloud_synced', handleLiveSync);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('bunk_cloud_synced', handleLiveSync);
+    };
   }, [activeDuty]);
 
   // Aggregate Metrics
