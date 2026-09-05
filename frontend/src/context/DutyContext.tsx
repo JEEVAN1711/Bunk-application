@@ -174,6 +174,9 @@ export const DutyProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await db.fuelReadings.bulkPut(initialReadings);
 
     await syncEngine.enqueue('DUTY', 'CREATE', newShift.id, newShift);
+    for (const r of initialReadings) {
+      await syncEngine.enqueue('READING', 'CREATE', r.id, r);
+    }
     setActiveDuty(newShift);
     return newShift;
   };
