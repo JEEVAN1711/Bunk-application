@@ -21,11 +21,16 @@ import {
   ShieldCheck,
   Smartphone,
   Send,
-  X
+  X,
+  Server,
+  Globe,
+  Wifi,
+  WifiOff
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { QRCodeSVG } from 'qrcode.react';
 import { verifyTotpCode, getTotpUri, ADMIN_TOTP_SECRET } from '../services/totpService';
+import { getApiBaseUrl, setCustomApiBaseUrl } from '../config/api';
 
 export const SettingsPage: React.FC = () => {
   const { theme, setTheme } = useTheme();
@@ -48,6 +53,34 @@ export const SettingsPage: React.FC = () => {
   const [passwordError, setPasswordError] = useState('');
   const [isResetting, setIsResetting] = useState(false);
   const [resetSuccess, setResetSuccess] = useState(false);
+
+  // Cloud API Server URL Configuration
+  const [cloudUrlInput, setCloudUrlInput] = useState(getApiBaseUrl() || '');
+  const [testingConnection, setTestingConnection] = useState(false);
+  const [connectionResult, setConnectionResult] = useState<{ connected: boolean; message: string } | null>(null);
+
+  const handleSaveCloudUrl = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCustomApiBaseUrl(cloudUrlInput);
+    setTestingConnection(true);
+    setConnectionResult(null);
+    try {
+      const res = await syncEngine.getCloudStatus();
+      if (res.connected) {
+        setConnectionResult({ connected: true, message: 'Connected to live cloud database!' });
+        await syncEngine.pullAndHydrateFromCloud();
+        await refreshDutyData();
+        await refreshUsers();
+        confetti({ particleCount: 40, spread: 60 });
+      } else {
+        setConnectionResult({ connected: false, message: 'Could not connect. Verify URL and ensure backend is active.' });
+      }
+    } catch (err: any) {
+      setConnectionResult({ connected: false, message: err.message || 'Connection failed' });
+    } finally {
+      setTestingConnection(false);
+    }
+  };
 
   const handleSavePricing = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -248,6 +281,93 @@ export const SettingsPage: React.FC = () => {
               <DollarSign className="w-4 h-4" />
               <span>Apply Pricing Changes</span>
             </button>
+          </div>
+        </form>
+      </div>
+
+      {/* SECTION 2.5: Cloud Backend API Server Configuration */}
+      <div className="glass-panel rounded-3xl p-6 border border-sky-200 bg-white/95 shadow-md space-y-4">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 rounded-2xl bg-sky-50 text-sky-700 border border-sky-200">
+            <Server className="w-5 h-5" />
+          </div>
+          <div>
+            <h3 className="font-extrabold text-base text-slate-900">Cloud Backend Server (5G & Multi-Device Sync)</h3>
+            <p className="text-xs text-slate-600 mt-0.5">
+              Connect this device to your cloud Spring Boot backend so updates sync across PC, mobile 5G, and Vercel.
+            </p>
+          </div>
+        </div>
+
+        <form onSubmit={handleSaveCloudUrl} className="space-y-3 pt-2">
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1.5">
+              Cloud Backend URL (Render, Railway, or Local IP)
+            </label>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <div className="relative flex-1">
+                <Globe className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                <input
+                  type="url"
+                  placeholder="e.g. https://bunk-management-backend.onrender.com or leave blank for local proxy"
+                  value={cloudUrlInput}
+                  onChange={e => setCloudUrlInput(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-10 pr-3.5 py-2.5 text-xs font-mono text-slate-900 font-semibold focus:outline-none focus:ring-2 focus:ring-sky-500 focus:bg-white transition-all"
+                />
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  type="submit"
+                  disabled={testingConnection}
+                  className="px-5 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-700 disabled:opacity-50 text-white text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-1.5"
+                >
+                  {testingConnection ? (
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Wifi className="w-3.5 h-3.5" />
+                  )}
+                  <span>{testingConnection ? 'Testing...' : 'Save & Connect'}</span>
+                </button>
+
+                {cloudUrlInput && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCloudUrlInput('');
+                      setCustomApiBaseUrl('');
+                      setConnectionResult(null);
+                    }}
+                    className="px-3.5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold transition-all border border-slate-200"
+                  >
+                    Reset
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {connectionResult && (
+            <div
+              className={`p-3 rounded-xl border text-xs font-semibold flex items-center gap-2 ${
+                connectionResult.connected
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                  : 'bg-rose-50 border-rose-200 text-rose-800'
+              }`}
+            >
+              {connectionResult.connected ? (
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+              ) : (
+                <WifiOff className="w-4 h-4 text-rose-600 flex-shrink-0" />
+              )}
+              <span>{connectionResult.message}</span>
+            </div>
+          )}
+
+          <div className="bg-slate-50 rounded-xl p-3 border border-slate-200 text-[11px] text-slate-500 space-y-1">
+            <p>
+              <strong className="text-slate-700">How to deploy backend on Render (Free):</strong> Push code to GitHub &rarr; Create new Web Service on Render from this repo &rarr; Set runtime to Docker &rarr; Copy the generated URL and paste it above or into Vercel environment variable <code className="bg-slate-200 px-1 py-0.5 rounded text-slate-800 font-mono">VITE_API_BASE_URL</code>.
+            </p>
           </div>
         </form>
       </div>

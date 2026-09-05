@@ -1,4 +1,4 @@
-import { API_BASE_URL } from '../config/api';
+import { getApiBaseUrl } from '../config/api';
 import { syncEngine } from './syncEngine';
 
 export interface PresencePayload {
@@ -45,7 +45,7 @@ class RealtimeSyncManager {
       this.reconnectTimer = null;
     }
 
-    const sseUrl = `${API_BASE_URL}/api/realtime/events?clientId=${encodeURIComponent(this.clientId)}`;
+    const sseUrl = `${getApiBaseUrl()}/api/realtime/events?clientId=${encodeURIComponent(this.clientId)}`;
 
     try {
       this.eventSource = new EventSource(sseUrl);
@@ -137,7 +137,7 @@ class RealtimeSyncManager {
    */
   public async broadcastPresence(payload: Omit<PresencePayload, 'timestamp'>): Promise<void> {
     try {
-      await fetch(`${API_BASE_URL}/api/realtime/presence`, {
+      await fetch(`${getApiBaseUrl()}/api/realtime/presence`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

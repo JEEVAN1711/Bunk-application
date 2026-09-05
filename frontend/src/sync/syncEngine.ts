@@ -1,6 +1,6 @@
 import { db } from '../db/db';
 import { SyncQueueItem } from '../types';
-import { API_BASE_URL } from '../config/api';
+import { getApiBaseUrl } from '../config/api';
 import './realtime';
 
 export type SyncState = 'ONLINE' | 'OFFLINE' | 'SYNCING' | 'ERROR';
@@ -110,7 +110,7 @@ class SyncEngine {
 
     try {
       // Send batch to backend API
-      const response = await fetch(`${API_BASE_URL}/api/sync/batch`, {
+      const response = await fetch(`${getApiBaseUrl()}/api/sync/batch`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -272,7 +272,7 @@ class SyncEngine {
 
       for (let i = 0; i < allItems.length; i += batchSize) {
         const chunk = allItems.slice(i, i + batchSize);
-        const response = await fetch(`${API_BASE_URL}/api/sync/batch`, {
+        const response = await fetch(`${getApiBaseUrl()}/api/sync/batch`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -332,7 +332,7 @@ class SyncEngine {
    */
   public async getCloudStatus(): Promise<{ connected: boolean; statusData?: any }> {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/sync/status`);
+      const res = await fetch(`${getApiBaseUrl()}/api/sync/status`);
       const contentType = res.headers.get('content-type') || '';
       if (res.ok && contentType.includes('application/json')) {
         const data = await res.json();
@@ -349,7 +349,7 @@ class SyncEngine {
    */
   public async getAllCloudData(): Promise<{ success: boolean; data?: any; error?: string }> {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/sync/all`);
+      const res = await fetch(`${getApiBaseUrl()}/api/sync/all`);
       const contentType = res.headers.get('content-type') || '';
       if (res.ok && contentType.includes('application/json')) {
         const data = await res.json();
@@ -633,8 +633,8 @@ class SyncEngine {
 
       // 2. Call backend cloud wipe endpoints
       await Promise.allSettled([
-        fetch(`${API_BASE_URL}/api/sync/customers/all`, { method: 'DELETE' }),
-        fetch(`${API_BASE_URL}/api/sync/customers/clear`, { method: 'POST' })
+        fetch(`${getApiBaseUrl()}/api/sync/customers/all`, { method: 'DELETE' }),
+        fetch(`${getApiBaseUrl()}/api/sync/customers/clear`, { method: 'POST' })
       ]);
 
       window.dispatchEvent(new CustomEvent('bunk_cloud_synced'));
@@ -670,8 +670,8 @@ class SyncEngine {
 
       // 2. Call backend cloud wipe endpoints
       await Promise.allSettled([
-        fetch(`${API_BASE_URL}/api/sync/reset-database-keep-users`, { method: 'POST' }),
-        fetch(`${API_BASE_URL}/api/sync/database/reset`, { method: 'DELETE' })
+        fetch(`${getApiBaseUrl()}/api/sync/reset-database-keep-users`, { method: 'POST' }),
+        fetch(`${getApiBaseUrl()}/api/sync/database/reset`, { method: 'DELETE' })
       ]);
 
       window.dispatchEvent(new CustomEvent('bunk_cloud_synced'));
