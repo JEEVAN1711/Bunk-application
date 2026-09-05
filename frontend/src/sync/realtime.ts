@@ -29,7 +29,27 @@ class RealtimeSyncManager {
     window.addEventListener('online', () => {
       this.reconnectDelay = 2000;
       this.connect();
+      syncEngine.pullAndHydrateFromCloud();
     });
+
+    // Mobile device wake-up / tab focus: instantly reconnect and hydrate
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+          if (!this.isConnected) {
+            this.connect();
+          }
+          syncEngine.pullAndHydrateFromCloud();
+        }
+      });
+
+      window.addEventListener('focus', () => {
+        if (!this.isConnected) {
+          this.connect();
+        }
+        syncEngine.pullAndHydrateFromCloud();
+      });
+    }
   }
 
   public connect() {

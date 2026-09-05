@@ -16,11 +16,13 @@ import {
   Coffee,
   Sparkles,
   Lock,
-  UserPlus
+  UserPlus,
+  RefreshCw
 } from 'lucide-react';
 import { CreditModal } from '../components/CreditModal';
 import { PaymentModal } from '../components/PaymentModal';
 import { ExpenseModal } from '../components/ExpenseModal';
+import { syncEngine } from '../sync/syncEngine';
 
 export const CashierPortal: React.FC = () => {
   const { activeDuty, pricing, deleteExpense } = useDuty();
@@ -156,9 +158,21 @@ export const CashierPortal: React.FC = () => {
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-amber-200/70 border border-amber-300 text-amber-900 text-xs font-bold whitespace-nowrap self-start sm:self-auto">
-              <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
-              Waiting for Admin
+            <div className="flex items-center gap-2 self-start sm:self-auto">
+              <button
+                type="button"
+                onClick={async () => {
+                  await syncEngine.pullAndHydrateFromCloud();
+                }}
+                className="px-3.5 py-2 rounded-xl bg-amber-200 hover:bg-amber-300 text-amber-900 text-xs font-bold transition-all border border-amber-300 flex items-center gap-1.5 cursor-pointer active:scale-95"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span>Check Live Shift</span>
+              </button>
+              <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-amber-200/70 border border-amber-300 text-amber-900 text-xs font-bold whitespace-nowrap">
+                <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                Waiting for Admin
+              </div>
             </div>
           </div>
         ) : !isAssignedCashier ? (

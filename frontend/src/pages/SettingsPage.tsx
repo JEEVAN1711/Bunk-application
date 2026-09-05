@@ -30,7 +30,8 @@ import {
 import confetti from 'canvas-confetti';
 import { QRCodeSVG } from 'qrcode.react';
 import { verifyTotpCode, getTotpUri, ADMIN_TOTP_SECRET } from '../services/totpService';
-import { getApiBaseUrl, setCustomApiBaseUrl } from '../config/api';
+import { getApiBaseUrl, setCustomApiBaseUrl, DEFAULT_CLOUD_API_URL } from '../config/api';
+import { realtimeManager } from '../sync/realtime';
 
 export const SettingsPage: React.FC = () => {
   const { theme, setTheme } = useTheme();
@@ -62,6 +63,7 @@ export const SettingsPage: React.FC = () => {
   const handleSaveCloudUrl = async (e: React.FormEvent) => {
     e.preventDefault();
     setCustomApiBaseUrl(cloudUrlInput);
+    realtimeManager.connect();
     setTestingConnection(true);
     setConnectionResult(null);
     try {
@@ -330,19 +332,31 @@ export const SettingsPage: React.FC = () => {
                   <span>{testingConnection ? 'Testing...' : 'Save & Connect'}</span>
                 </button>
 
-                {cloudUrlInput && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setCloudUrlInput('');
-                      setCustomApiBaseUrl('');
-                      setConnectionResult(null);
-                    }}
-                    className="px-3.5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold transition-all border border-slate-200"
-                  >
-                    Reset
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setCloudUrlInput(DEFAULT_CLOUD_API_URL);
+                    setCustomApiBaseUrl(DEFAULT_CLOUD_API_URL);
+                    realtimeManager.connect();
+                    setTestingConnection(true);
+                    setConnectionResult(null);
+                    try {
+                      const res = await syncEngine.getCloudStatus();
+                      if (res.connected) {
+                        setConnectionResult({ connected: true, message: 'Connected to live cloud database (Render)!' });
+                        await syncEngine.pullAndHydrateFromCloud();
+                        await refreshDutyData();
+                        await refreshUsers();
+                      }
+                    } finally {
+                      setTestingConnection(false);
+                    }
+                  }}
+                  className="px-3.5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all border border-slate-200 whitespace-nowrap"
+                  title="Reset to official cloud backend"
+                >
+                  Reset to Default Cloud
+                </button>
               </div>
             </div>
           </div>

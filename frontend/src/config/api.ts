@@ -6,13 +6,23 @@ export const getApiBaseUrl = (): string => {
     // 1. Check custom override from Settings page
     const saved = localStorage.getItem('bunk_cloud_api_url');
     if (saved && saved.trim()) {
-      return saved.trim().replace(/\/+$/, '');
+      const clean = saved.trim().replace(/\/+$/, '');
+      // Auto-purge dead/suspended previous render URLs (bunk-application-2, 1, 3, etc.)
+      if (
+        clean.includes('bunk-application-2') ||
+        clean.includes('bunk-application-1') ||
+        clean.includes('bunk-application-3') ||
+        clean === 'https://bunk-application.onrender.com'
+      ) {
+        console.warn('Auto-purging suspended cloud URL from storage:', clean);
+        localStorage.removeItem('bunk_cloud_api_url');
+      } else {
+        return clean;
+      }
     }
 
-    // 2. If running on local dev machine and no VITE_API_BASE_URL is set, use local proxy
-    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    const envUrl = import.meta.env.VITE_API_BASE_URL;
-    if (isLocalhost && (!envUrl || !envUrl.trim())) {
+    // 2. Check if user explicitly selected local backend only
+    if (localStorage.getItem('bunk_use_local_backend') === 'true') {
       return '';
     }
   }
@@ -23,7 +33,8 @@ export const getApiBaseUrl = (): string => {
     return envUrl.trim().replace(/\/+$/, '');
   }
 
-  // 4. Default to live Render cloud backend for Vercel, mobile, and production
+  // 4. Default to live Render cloud backend across ALL devices (PC localhost, Mobile 5G, Vercel)
+  // This guarantees seamless real-time synchronization between Admin on PC and Cashier on Mobile
   return DEFAULT_CLOUD_API_URL;
 };
 
@@ -38,3 +49,4 @@ export const setCustomApiBaseUrl = (url: string) => {
     }
   }
 };
+
