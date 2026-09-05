@@ -270,8 +270,12 @@ export const DutyClosingPage: React.FC<{ onNavigate: (page: string) => void }> =
 
       setFinalizedClosing(closed);
 
-      const msg = generateWhatsAppShiftReport(closed, readings);
-      setWhatsappMessage(msg);
+      try {
+        const msg = generateWhatsAppShiftReport(closed, readings);
+        setWhatsappMessage(msg);
+      } catch (e) {
+        console.warn('WhatsApp report generation note:', e);
+      }
 
       // Automatically generate & download the complete Shift Excel / CSV sheet!
       try {
@@ -855,7 +859,7 @@ export const DutyClosingPage: React.FC<{ onNavigate: (page: string) => void }> =
               <button
                 type="button"
                 onClick={handleFinalizeShift}
-                disabled={isClosing || !actualCashInHand}
+                disabled={isClosing || actualCashInHand === '' || actualCashInHand === undefined}
                 className="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-500 hover:to-teal-500 disabled:opacity-50 text-white font-extrabold text-base tracking-wide transition-all shadow-xl shadow-emerald-950/80 flex items-center justify-center gap-2 glow-emerald"
               >
                 <Lock className="w-5 h-5" />

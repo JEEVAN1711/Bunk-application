@@ -303,7 +303,32 @@ export const DutyProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     });
 
+    // 1. Enqueue Duty Shift status as CLOSED to cloud
+    await syncEngine.enqueue('DUTY', 'CREATE', closing.dutyId, {
+      id: closing.dutyId,
+      shiftNumber: closing.shiftNumber,
+      cashierId: closing.cashierId,
+      cashierName: closing.cashierName,
+      status: 'CLOSED',
+      endTime: dutyClosing.closedAt
+    });
+
+    // 2. Enqueue Duty Closing record
     await syncEngine.enqueue('DUTY_CLOSING', 'CREATE', id, dutyClosing);
+
+    // 3. Mark finalized readings in cloud
+    const closedReadings = await db.fuelReadings.where('dutyId').equals(closing.dutyId).toArray();
+    for (const r of closedReadings) {
+      await syncEngine.enqueue('READING', 'CREATE', r.id, {
+        ...r,
+        isFinalized: true,
+        finalizedAt: dutyClosing.closedAt
+      });
+    }
+
+    // 4. Immediately trigger cloud sync so all devices reflect shift closure
+    syncEngine.triggerSync().catch(console.warn);
+
     setActiveDuty(null);
     return dutyClosing;
   };
