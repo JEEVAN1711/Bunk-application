@@ -8,7 +8,7 @@ services:
     healthCheckPath: /api/sync/status
     envVars:
       - key: MONGODB_URI
-        value: mongodb+srv://jeevanmoorthi1711_db_user:BunkPass2026!@bunk.fugqtce.mongodb.net/bunkdb?retryWrites=true&w=majority
+        value: "mongodb+srv://jeevanmoorthi1711_db_user:BunkPass2026%21@bunk.fugqtce.mongodb.net/bunkdb?retryWrites=true&w=majority"
       - key: SPRING_PROFILES_ACTIVE
         value: prod
       - key: FAST2SMS_API_KEY

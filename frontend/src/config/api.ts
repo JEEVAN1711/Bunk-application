@@ -25,16 +25,31 @@ export const getApiBaseUrl = (): string => {
     if (localStorage.getItem('bunk_use_local_backend') === 'true') {
       return '';
     }
+
+    // 3. Auto-detect environment:
+    // If running on localhost or over local Wi-Fi network (192.168.*, 10.*, 172.*),
+    // or if running directly on Render (*.onrender.com):
+    // Use relative path '' so requests go through the active server proxy directly to the connected backend!
+    const host = window.location.hostname;
+    if (
+      host === 'localhost' ||
+      host === '127.0.0.1' ||
+      host.startsWith('192.168.') ||
+      host.startsWith('10.') ||
+      host.startsWith('172.') ||
+      window.location.origin.includes('onrender.com')
+    ) {
+      return '';
+    }
   }
 
-  // 3. Check VITE_API_BASE_URL environment variable
+  // 4. Check VITE_API_BASE_URL environment variable
   const envUrl = import.meta.env.VITE_API_BASE_URL;
   if (envUrl && envUrl.trim()) {
     return envUrl.trim().replace(/\/+$/, '');
   }
 
-  // 4. Default to live Render cloud backend across ALL devices (PC localhost, Mobile 5G, Vercel)
-  // This guarantees seamless real-time synchronization between Admin on PC and Cashier on Mobile
+  // 5. Default to live Render cloud backend
   return DEFAULT_CLOUD_API_URL;
 };
 

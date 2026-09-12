@@ -6,7 +6,7 @@ spring:
     name: bunk-management-service
   data:
     mongodb:
-      uri: ${MONGODB_URI:mongodb+srv://jeevanmoorthi1711_db_user:BunkPass2026!@bunk.fugqtce.mongodb.net/bunkdb?retryWrites=true&w=majority}
+      uri: "${MONGODB_URI:mongodb+srv://jeevanmoorthi1711_db_user:BunkPass2026%21@bunk.fugqtce.mongodb.net/bunkdb?retryWrites=true&w=majority}"
       auto-index-creation: true
 
 app:
