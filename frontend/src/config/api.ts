@@ -37,7 +37,8 @@ export const getApiBaseUrl = (): string => {
       host.startsWith('192.168.') ||
       host.startsWith('10.') ||
       host.startsWith('172.') ||
-      window.location.origin.includes('onrender.com')
+      window.location.origin.includes('onrender.com') ||
+      window.location.origin.includes('vercel.app')
     ) {
       return '';
     }
