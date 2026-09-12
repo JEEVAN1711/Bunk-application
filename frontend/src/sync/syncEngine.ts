@@ -66,7 +66,26 @@ class SyncEngine {
   }
 
   /**
-   * Enqueue a local business action to sync queue
+   * Mark local entity as synced in IndexedDB
+   */
+  private async markEntitySynced(entityType: SyncQueueItem['entityType'], syncId: string) {
+    try {
+      if (entityType === 'USER') await db.users.update(syncId, { synced: true });
+      else if (entityType === 'CREDIT') await db.creditEntries.update(syncId, { synced: true });
+      else if (entityType === 'PAYMENT') await db.paymentEntries.update(syncId, { synced: true });
+      else if (entityType === 'READING') await db.fuelReadings.update(syncId, { synced: true });
+      else if (entityType === 'DUTY_CLOSING') await db.dutyClosings.update(syncId, { synced: true });
+      else if (entityType === 'CUSTOMER') await db.customers.update(syncId, { synced: true });
+      else if (entityType === 'DUTY') await db.dutyShifts.update(syncId, { synced: true });
+      else if (entityType === 'PAYMENT_REQUEST') await db.paymentRequests.update(syncId, { synced: true });
+      else if (entityType === 'EXPENSE') await db.expenseEntries.update(syncId, { synced: true });
+      else if (entityType === 'TANK_STOCK') await db.tankStocks.update(syncId, { synced: true });
+    } catch {}
+  }
+
+  /**
+   * Directly write change to the Cloud Database (PostgreSQL) immediately.
+   * If offline or network error occurs, queues for automatic sync upon reconnect.
    */
   public async enqueue(
     entityType: SyncQueueItem['entityType'],
@@ -74,6 +93,46 @@ class SyncEngine {
     syncId: string,
     payload: any
   ) {
+    // 1. Direct write to Cloud PostgreSQL DB immediately if online
+    if (navigator.onLine) {
+      try {
+        const response = await fetch(`${getApiBaseUrl()}/api/sync/batch`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('bunk_jwt_token') || ''}`
+          },
+          body: JSON.stringify({
+            batchId: 'direct-' + Date.now(),
+            items: [{
+              syncId,
+              entityType,
+              action,
+              timestamp: new Date().toISOString(),
+              payload
+            }]
+          })
+        });
+
+        const contentType = response.headers.get('content-type') || '';
+        if (response.ok && contentType.includes('application/json')) {
+          await this.markEntitySynced(entityType, syncId);
+          this.currentStatus = 'ONLINE';
+          this.notifyListeners();
+          
+          // Trigger instant refresh across local tabs/components
+          window.dispatchEvent(new CustomEvent('bunk_cloud_synced'));
+
+          // Also flush any previously accumulated offline items in the background
+          this.triggerSync();
+          return;
+        }
+      } catch (err) {
+        console.warn('Direct cloud write failed, saving to offline sync queue as fallback:', err);
+      }
+    }
+
+    // 2. Offline fallback (or if cloud request failed): queue locally
     await db.syncQueue.add({
       entityType,
       action,
@@ -86,7 +145,6 @@ class SyncEngine {
     this.notifyListeners();
 
     if (navigator.onLine) {
-      // Trigger sync immediately if online
       this.triggerSync();
     }
   }
@@ -403,29 +461,23 @@ class SyncEngine {
           }
         }
 
-        // Hydrate Customers (Filter out legacy test customers)
-        if (Array.isArray(cloudData.customers) && cloudData.customers.length > 0) {
-          for (const c of cloudData.customers) {
-            const nameLower = (c.name || '').toLowerCase().trim();
-            const cleanDigits = (c.phoneNumber || '').replace(/\D/g, '');
-            if (
-              cleanDigits.length < 6 ||
-              nameLower.includes('raja') ||
-              nameLower.includes('jayanthi') ||
-              nameLower.includes('ramesh') ||
-              nameLower.includes('sharma') ||
-              nameLower.includes('patel') ||
-              nameLower.includes('test') ||
-              nameLower.includes('dummy') ||
-              (c.id && (c.id.startsWith('c-ramesh') || c.id.startsWith('c-sharma') || c.id.startsWith('c-patel')))
-            ) {
-              continue; // Skip legacy test customers
+        // Hydrate Customers directly from Cloud DB
+        if (Array.isArray(cloudData.customers)) {
+          const cloudCustomerIds = new Set(cloudData.customers.map((c: any) => c.id).filter(Boolean));
+          // Prune any deleted customers from local cache
+          const localCustomers = await db.customers.toArray();
+          for (const lc of localCustomers) {
+            if (lc.synced && !cloudCustomerIds.has(lc.id)) {
+              await db.customers.delete(lc.id);
             }
+          }
 
+          for (const c of cloudData.customers) {
+            if (!c.id || !c.name) continue;
             await db.customers.put({
               id: c.id,
               name: c.name,
-              phoneNumber: c.phoneNumber,
+              phoneNumber: c.phoneNumber || '',
               totalCredit: Number(c.totalCredit || 0),
               totalPaid: Number(c.totalPaid || 0),
               currentBalance: Number(c.currentBalance || 0),
