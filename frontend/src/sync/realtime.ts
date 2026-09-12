@@ -49,6 +49,14 @@ class RealtimeSyncManager {
         }
         syncEngine.pullAndHydrateFromCloud();
       });
+
+      // Active 3-second heartbeat to guarantee seamless multi-device sync
+      // across PC, mobile phones, and tablets even if mobile OS throttles SSE
+      setInterval(() => {
+        if (navigator.onLine && (document.visibilityState === 'visible' || !document.hidden)) {
+          syncEngine.pullAndHydrateFromCloud().catch(() => {});
+        }
+      }, 3000);
     }
   }
 

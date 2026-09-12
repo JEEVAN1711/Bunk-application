@@ -23,16 +23,20 @@ export const Navbar: React.FC = () => {
   const { status, pendingCount, triggerSync } = useSync();
   const { activeDuty, pricing } = useDuty();
   const { theme, setTheme } = useTheme();
-  const [time, setTime] = useState<string>('');
+  const [currentDateTime, setCurrentDateTime] = useState<{ date: string; time: string }>({ date: '', time: '' });
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [isSyncingSpin, setIsSyncingSpin] = useState(false);
 
   useEffect(() => {
     const update = () => {
       const now = new Date();
-      setTime(
-        now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
-      );
+      const day = String(now.getDate()).padStart(2, '0');
+      const month = now.toLocaleString('en-US', { month: 'short' });
+      const year = now.getFullYear();
+      setCurrentDateTime({
+        date: `${day}-${month}-${year}`,
+        time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+      });
     };
     update();
     const interval = setInterval(update, 1000);
@@ -120,9 +124,11 @@ export const Navbar: React.FC = () => {
             </div>
           )}
 
-          <div className="flex items-center gap-1.5 text-xs text-slate-700 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl font-mono-numbers shadow-sm">
+          <div className="flex items-center gap-2 text-xs text-slate-700 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl font-mono-numbers shadow-sm">
             <Clock className="w-3.5 h-3.5 text-blue-600" />
-            <span className="font-bold text-slate-900">{time}</span>
+            <span className="font-bold text-slate-800">{currentDateTime.date}</span>
+            <span className="text-slate-300 font-normal">|</span>
+            <span className="font-bold text-slate-900">{currentDateTime.time}</span>
           </div>
         </div>
 

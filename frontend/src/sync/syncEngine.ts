@@ -488,9 +488,38 @@ class SyncEngine {
           }
         }
 
-        // Hydrate Duty Shifts
-        if (Array.isArray(cloudData.dutyShifts) && cloudData.dutyShifts.length > 0) {
+        // Hydrate Duty Shifts & Closings with strict cloud reconciliation
+        const closedDutyIds = new Set<string>();
+        if (Array.isArray(cloudData.dutyClosings)) {
+          cloudData.dutyClosings.forEach((cl: any) => {
+            if (cl.dutyId) closedDutyIds.add(cl.dutyId);
+          });
+        }
+
+        if (Array.isArray(cloudData.dutyShifts)) {
+          const cloudShiftMap = new Map(cloudData.dutyShifts.map((s: any) => [s.id, s]));
+
+          // Reconcile local shifts: prune stale offline shifts and sync closed status
+          const localShifts = await db.dutyShifts.toArray();
+          for (const ls of localShifts) {
+            const cloudShift: any = cloudShiftMap.get(ls.id);
+            if (!cloudShift) {
+              // Delete orphaned local shift that does not exist in cloud database
+              await db.dutyShifts.delete(ls.id);
+            } else {
+              const isClosed = cloudShift.status === 'CLOSED' || closedDutyIds.has(ls.id);
+              if (isClosed && ls.status !== 'CLOSED') {
+                await db.dutyShifts.update(ls.id, {
+                  status: 'CLOSED',
+                  endTime: cloudShift.endTime || new Date().toISOString()
+                });
+              }
+            }
+          }
+
+          // Put all valid cloud shifts
           for (const s of cloudData.dutyShifts) {
+            const isClosed = s.status === 'CLOSED' || closedDutyIds.has(s.id);
             await db.dutyShifts.put({
               id: s.id,
               shiftNumber: s.shiftNumber,
@@ -500,7 +529,7 @@ class SyncEngine {
               supportCashierName: s.supportCashierName,
               startTime: s.startTime,
               endTime: s.endTime,
-              status: s.status || 'ACTIVE',
+              status: isClosed ? 'CLOSED' : (s.status || 'ACTIVE'),
               notes: s.notes,
               synced: true
             });

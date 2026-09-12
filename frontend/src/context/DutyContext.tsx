@@ -51,10 +51,24 @@ export const DutyProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [pricing, setPricing] = useState<ProductPricing>(DEFAULT_PRICES);
 
   const refreshDutyData = useCallback(async () => {
-    // Fetch active duty - get the most recent ACTIVE shift across cloud and local DB
+    // Fetch active duty - get the genuine ACTIVE shift across cloud and local DB
     const allShifts = await db.dutyShifts.toArray();
+    const closings = await db.dutyClosings.toArray();
+    const closedShiftIds = new Set(closings.map(c => c.dutyId).filter(Boolean));
+
+    const now = Date.now();
     const activeShifts = allShifts
-      .filter(d => (d.status || '').toUpperCase() === 'ACTIVE')
+      .filter(d => {
+        if ((d.status || '').toUpperCase() !== 'ACTIVE') return false;
+        if (closedShiftIds.has(d.id)) return false;
+        const shiftAgeHours = (now - new Date(d.startTime || 0).getTime()) / (1000 * 60 * 60);
+        if (shiftAgeHours > 24) {
+          // Shift started more than 24h ago is stale and closed
+          db.dutyShifts.update(d.id, { status: 'CLOSED' }).catch(() => {});
+          return false;
+        }
+        return true;
+      })
       .sort((a, b) => new Date(b.startTime || 0).getTime() - new Date(a.startTime || 0).getTime());
 
     const active = activeShifts.length > 0 ? activeShifts[0] : null;

@@ -25,8 +25,14 @@ export const NewDutyModal: React.FC<NewDutyModalProps> = ({ isOpen, onClose }) =
 
   const resetToCurrentDateTime = () => {
     const now = new Date();
-    const dateStr = now.toISOString().slice(0, 10);
-    const timeStr = now.toTimeString().slice(0, 5);
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${day}`;
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const timeStr = `${hours}:${minutes}`;
+
     setShiftDate(dateStr);
     setShiftTime(timeStr);
 

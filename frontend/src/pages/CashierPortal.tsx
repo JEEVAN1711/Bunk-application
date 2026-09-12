@@ -34,6 +34,23 @@ export const CashierPortal: React.FC = () => {
   const [creditModalOpen, setCreditModalOpen] = useState(false);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [expenseModalOpen, setExpenseModalOpen] = useState(false);
+  const [liveDateTime, setLiveDateTime] = useState<{ date: string; time: string }>({ date: '', time: '' });
+
+  useEffect(() => {
+    const updateTime = () => {
+      const now = new Date();
+      const day = String(now.getDate()).padStart(2, '0');
+      const month = now.toLocaleString('en-US', { month: 'short' });
+      const year = now.getFullYear();
+      setLiveDateTime({
+        date: `${day}-${month}-${year}`,
+        time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+      });
+    };
+    updateTime();
+    const timer = setInterval(updateTime, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   const loadShiftData = async () => {
     if (activeDuty) {
@@ -110,10 +127,16 @@ export const CashierPortal: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2.5 flex-wrap">
-            <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-4 py-2 rounded-2xl shadow-sm">
+            <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3.5 py-2 rounded-2xl shadow-sm text-xs font-mono-numbers">
               <Clock className="w-4 h-4 text-blue-600" />
-              <span className="text-xs text-slate-500 font-medium">Shift Start:</span>
-              <span className="text-xs font-black font-mono-numbers text-slate-900">
+              <span className="text-slate-500 font-semibold">Live:</span>
+              <span className="font-bold text-slate-800">{liveDateTime.date}</span>
+              <span className="text-slate-300 font-normal">|</span>
+              <span className="font-bold text-blue-700">{liveDateTime.time}</span>
+            </div>
+            <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3.5 py-2 rounded-2xl shadow-sm text-xs">
+              <span className="text-slate-500 font-medium">Shift Start:</span>
+              <span className="font-black font-mono-numbers text-slate-900">
                 {activeDuty ? new Date(activeDuty.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--'}
               </span>
             </div>
