@@ -1,11 +1,11 @@
 package com.bunk.management.entity;
 
-import jakarta.persistence.*;
 import lombok.*;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
 import java.time.LocalDateTime;
 
-@Entity
-@Table(name = "duty_shifts")
+@Document(collection = "duty_shifts")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -16,10 +16,8 @@ public class DutyShift {
     @Id
     private String id;
 
-    @Column(nullable = false, unique = true)
     private String shiftNumber;
 
-    @Column(nullable = false)
     private String cashierId;
 
     private String cashierName;
@@ -28,12 +26,10 @@ public class DutyShift {
 
     private String supportCashierName;
 
-    @Column(nullable = false)
     private LocalDateTime startTime;
 
     private LocalDateTime endTime;
 
-    @Column(nullable = false)
     private String status; // ACTIVE, CLOSED
 
     private String notes;

@@ -4,28 +4,10 @@ server:
 spring:
   application:
     name: bunk-management-service
-  datasource:
-    url: ${DATABASE_URL:jdbc:postgresql://ep-royal-leaf-ax5uxvri-pooler.c-4.us-east-2.aws.neon.tech:5432/neondb?sslmode=require}
-    driver-class-name: ${DATABASE_DRIVER:org.postgresql.Driver}
-    username: ${DATABASE_USERNAME:neondb_owner}
-    password: ${DATABASE_PASSWORD:npg_G3lmjgD2LJeb}
-    hikari:
-      maximum-pool-size: 10
-      minimum-idle: 2
-      idle-timeout: 30000
-      max-lifetime: 600000
-      connection-timeout: 20000
-  h2:
-    console:
-      enabled: false
-      path: /h2-console
-  jpa:
-    hibernate:
-      ddl-auto: update
-    show-sql: false
-    properties:
-      hibernate:
-        format_sql: true
+  data:
+    mongodb:
+      uri: ${MONGODB_URI:mongodb+srv://jeevanmoorthi1711_db_user:BunkPass2026!@bunk.fugqtce.mongodb.net/bunkdb?retryWrites=true&w=majority}
+      auto-index-creation: true
 
 app:
   jwt:

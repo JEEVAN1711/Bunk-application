@@ -1,12 +1,12 @@
 package com.bunk.management.entity;
 
-import jakarta.persistence.*;
 import lombok.*;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-@Entity
-@Table(name = "tank_stocks")
+@Document(collection = "tank_stocks")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -17,10 +17,8 @@ public class TankStockEntry {
     @Id
     private String id; // e.g. stock-2026-09-05-day or client UUID
 
-    @Column(nullable = false)
     private String date;
 
-    @Column(nullable = false)
     private String period; // DAY_SHIFT_END, NIGHT_SHIFT_END, SHIFT_END
 
     private String shiftName;
@@ -40,6 +38,5 @@ public class TankStockEntry {
     private String recordedByAdminId;
     private String recordedByAdminName;
 
-    @Column(nullable = false)
     private LocalDateTime timestamp;
 }

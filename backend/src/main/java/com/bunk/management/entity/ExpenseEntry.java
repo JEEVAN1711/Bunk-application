@@ -1,12 +1,12 @@
 package com.bunk.management.entity;
 
-import jakarta.persistence.*;
 import lombok.*;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-@Entity
-@Table(name = "expense_entries")
+@Document(collection = "expense_entries")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -17,24 +17,19 @@ public class ExpenseEntry {
     @Id
     private String id; // Client UUID syncId
 
-    @Column(nullable = false)
     private String dutyId;
 
-    @Column(nullable = false)
     private String cashierId;
 
     private String cashierName;
 
-    @Column(nullable = false)
     private String title;
 
     private String category; // FOOD_BEVERAGES, GENERATOR_FUEL, CLEANING_MAINTENANCE, STATIONERY, TRANSPORT, OTHER
 
-    @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal amount;
 
     private String notes;
 
-    @Column(nullable = false)
     private LocalDateTime timestamp;
 }

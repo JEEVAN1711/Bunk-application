@@ -7,14 +7,8 @@ services:
     plan: free
     healthCheckPath: /api/sync/status
     envVars:
-      - key: DATABASE_URL
-        value: jdbc:postgresql://ep-royal-leaf-ax5uxvri-pooler.c-4.us-east-2.aws.neon.tech:5432/neondb?sslmode=require
-      - key: DATABASE_USERNAME
-        value: neondb_owner
-      - key: DATABASE_PASSWORD
-        value: npg_G3lmjgD2LJeb
-      - key: DATABASE_DRIVER
-        value: org.postgresql.Driver
+      - key: MONGODB_URI
+        value: mongodb+srv://jeevanmoorthi1711_db_user:BunkPass2026!@bunk.fugqtce.mongodb.net/bunkdb?retryWrites=true&w=majority
       - key: SPRING_PROFILES_ACTIVE
         value: prod
       - key: FAST2SMS_API_KEY

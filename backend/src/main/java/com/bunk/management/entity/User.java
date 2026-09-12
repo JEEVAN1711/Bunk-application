@@ -1,11 +1,11 @@
 package com.bunk.management.entity;
 
-import jakarta.persistence.*;
 import lombok.*;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
 import java.time.LocalDateTime;
 
-@Entity
-@Table(name = "users")
+@Document(collection = "users")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -16,24 +16,18 @@ public class User {
     @Id
     private String id;
 
-    @Column(nullable = false, unique = true)
     private String username;
 
-    @Column(nullable = true)
     private String passwordHash;
 
-    @Column(nullable = false)
     private String fullName;
 
     private String phone;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
     private Role role;
 
     private String photoUrl;
 
-    @Column(nullable = false)
     @Builder.Default
     private boolean active = true;
 
