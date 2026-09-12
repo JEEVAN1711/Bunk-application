@@ -12,6 +12,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 @Service
 @Slf4j
+@SuppressWarnings("null")
 public class SseService {
 
     // Emitter timeout: 30 minutes (reconnects automatically if disconnected)
