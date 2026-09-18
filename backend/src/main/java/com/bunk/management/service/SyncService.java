@@ -210,6 +210,7 @@ public class SyncService {
                             .differenceAmount(new BigDecimal(p.get("differenceAmount").toString()))
                             .closingStatus(ClosingStatus.valueOf((String) p.get("closingStatus")))
                             .notes((String) p.get("notes"))
+                            .denominations(p.get("denominations"))
                             .closedAt(LocalDateTime.now())
                             .isLocked(true)
                             .build();

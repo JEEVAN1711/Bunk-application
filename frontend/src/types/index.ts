@@ -140,6 +140,18 @@ export interface FuelReading {
   synced?: boolean;
 }
 
+export interface CashDenominations {
+  notes500?: number;
+  notes200?: number;
+  notes100?: number;
+  notes50?: number;
+  notes20?: number;
+  notes10?: number;
+  coins?: number;
+  totalNotes?: number;
+  summaryText?: string;
+}
+
 export interface DutyClosing {
   id: string;
   dutyId: string;
@@ -156,6 +168,7 @@ export interface DutyClosing {
   actualCashInHand: number;
   differenceAmount: number; // actual - expected
   closingStatus: ClosingStatus;
+  denominations?: CashDenominations;
   notes?: string;
   closedAt: string;
   isLocked: boolean;

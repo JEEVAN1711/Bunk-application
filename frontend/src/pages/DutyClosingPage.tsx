@@ -20,7 +20,10 @@ import {
   ChevronDown,
   ChevronUp,
   Download,
-  Share2
+  Share2,
+  Calculator,
+  Coins,
+  RotateCcw
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -36,6 +39,25 @@ export const DutyClosingPage: React.FC<{ onNavigate: (page: string) => void }> =
   const [closingNotes, setClosingNotes] = useState<string>('');
   const [isClosing, setIsClosing] = useState(false);
   const [finalizedClosing, setFinalizedClosing] = useState<DutyClosing | null>(null);
+
+  // Cash Denominations Note Split State: 500, 200, 100, 50, 20, 10 notes & loose coins
+  const [denominations, setDenominations] = useState<{
+    500: string;
+    200: string;
+    100: string;
+    50: string;
+    20: string;
+    10: string;
+    coins: string;
+  }>({
+    500: '',
+    200: '',
+    100: '',
+    50: '',
+    20: '',
+    10: '',
+    coins: ''
+  });
 
   // Pump Fuel Filter Tab: ALL, PETROL, DIESEL, OIL
   const [activePumpTab, setActivePumpTab] = useState<'ALL' | 'PETROL' | 'DIESEL' | 'OIL'>('ALL');
@@ -97,6 +119,17 @@ export const DutyClosingPage: React.FC<{ onNavigate: (page: string) => void }> =
     text += `📥 *Net Expected Handover:* ₹${c.expectedCashBalance.toFixed(2)}\n`;
     text += `🤝 *Actual Cash Handed:* ₹${c.actualCashInHand.toFixed(2)}\n`;
     text += `⚖️ *Status:* ${c.closingStatus === 'MATCHED' ? '✅ MATCHED (₹0.00)' : c.closingStatus === 'EXTRA' ? `🔵 EXTRA (+₹${c.differenceAmount.toFixed(2)})` : `🔴 SHORTAGE (-₹${Math.abs(c.differenceAmount).toFixed(2)})`}\n`;
+    if (c.denominations && (c.denominations.totalNotes || c.denominations.coins)) {
+      text += `\n💵 *PHYSICAL CASH SPLIT BREAKDOWN:*\n`;
+      if (c.denominations.notes500) text += ` • ₹500 Notes: ${c.denominations.notes500} (₹${(c.denominations.notes500 * 500).toLocaleString('en-IN')})\n`;
+      if (c.denominations.notes200) text += ` • ₹200 Notes: ${c.denominations.notes200} (₹${(c.denominations.notes200 * 200).toLocaleString('en-IN')})\n`;
+      if (c.denominations.notes100) text += ` • ₹100 Notes: ${c.denominations.notes100} (₹${(c.denominations.notes100 * 100).toLocaleString('en-IN')})\n`;
+      if (c.denominations.notes50) text += ` • ₹50 Notes: ${c.denominations.notes50} (₹${(c.denominations.notes50 * 50).toLocaleString('en-IN')})\n`;
+      if (c.denominations.notes20) text += ` • ₹20 Notes: ${c.denominations.notes20} (₹${(c.denominations.notes20 * 20).toLocaleString('en-IN')})\n`;
+      if (c.denominations.notes10) text += ` • ₹10 Notes: ${c.denominations.notes10} (₹${(c.denominations.notes10 * 10).toLocaleString('en-IN')})\n`;
+      if (c.denominations.coins) text += ` • Coins: ₹${c.denominations.coins.toLocaleString('en-IN')}\n`;
+      text += `   ↳ *Total Notes: ${c.denominations.totalNotes || 0} | Total Handover: ₹${c.actualCashInHand.toFixed(2)}*\n`;
+    }
     if (c.notes) text += `📝 *Notes:* ${c.notes}\n`;
     text += `\n📍 *Bharat Petroleum Highway Hub*`;
 
@@ -108,6 +141,19 @@ export const DutyClosingPage: React.FC<{ onNavigate: (page: string) => void }> =
     csv += "--- SHIFT SUMMARY ---\n";
     csv += "Shift Number,Lead Cashier,Settled By Admin,Closed At,Gross Sales (INR),Credit Given (INR),Daily Expenses (INR),Expected Cash Handover (INR),Actual Cash Handed (INR),Difference (INR),Audit Status\n";
     csv += `"${c.shiftNumber}","${c.cashierName}","${c.closedByAdminName}","${new Date(c.closedAt).toLocaleString('en-IN')}",${c.grossFuelSalesAmount},${c.creditGivenAmount},${c.dailyExpensesAmount || 0},${c.expectedCashBalance},${c.actualCashInHand},${c.differenceAmount},"${c.closingStatus}"\n\n`;
+
+    if (c.denominations && (c.denominations.totalNotes || c.denominations.coins)) {
+      csv += "--- CASH DENOMINATION & NOTE SPLIT ---\n";
+      csv += "Denomination,Count / Quantity,Subtotal Amount (INR)\n";
+      csv += `"₹500 Notes",${c.denominations.notes500 || 0},${(c.denominations.notes500 || 0) * 500}\n`;
+      csv += `"₹200 Notes",${c.denominations.notes200 || 0},${(c.denominations.notes200 || 0) * 200}\n`;
+      csv += `"₹100 Notes",${c.denominations.notes100 || 0},${(c.denominations.notes100 || 0) * 100}\n`;
+      csv += `"₹50 Notes",${c.denominations.notes50 || 0},${(c.denominations.notes50 || 0) * 50}\n`;
+      csv += `"₹20 Notes",${c.denominations.notes20 || 0},${(c.denominations.notes20 || 0) * 20}\n`;
+      csv += `"₹10 Notes",${c.denominations.notes10 || 0},${(c.denominations.notes10 || 0) * 10}\n`;
+      csv += `"Coins (INR)",-,${c.denominations.coins || 0}\n`;
+      csv += `"TOTAL COUNTED NOTES",${c.denominations.totalNotes || 0},${c.actualCashInHand}\n\n`;
+    }
 
     csv += "--- PUMP METER DISPENSED BREAKDOWN & LITERS RAN ---\n";
     csv += "Product Type,Dispenser / Pump Name,Start Reading (Before Shift),End Reading (Closing),Liters Ran / Dispensed,Rate per Liter (INR),Total Sales Amount (INR)\n";
@@ -312,6 +358,57 @@ export const DutyClosingPage: React.FC<{ onNavigate: (page: string) => void }> =
     closingStatus = 'SHORTAGE';
   }
 
+  // Denominations Subtotals & Counters
+  const c500 = parseInt(denominations['500']) || 0;
+  const c200 = parseInt(denominations['200']) || 0;
+  const c100 = parseInt(denominations['100']) || 0;
+  const c50 = parseInt(denominations['50']) || 0;
+  const c20 = parseInt(denominations['20']) || 0;
+  const c10 = parseInt(denominations['10']) || 0;
+  const cCoins = parseFloat(denominations.coins) || 0;
+
+  const totalDenominationNotes = c500 + c200 + c100 + c50 + c20 + c10;
+  const totalDenominationAmount = (c500 * 500) + (c200 * 200) + (c100 * 100) + (c50 * 50) + (c20 * 20) + (c10 * 10) + cCoins;
+  const hasDenominations = totalDenominationNotes > 0 || cCoins > 0;
+
+  const handleDenominationChange = (
+    key: '500' | '200' | '100' | '50' | '20' | '10' | 'coins',
+    val: string
+  ) => {
+    const clean = val.replace(/[^0-9.]/g, '');
+    const next = { ...denominations, [key]: clean };
+    setDenominations(next);
+
+    const n500 = parseInt(next['500']) || 0;
+    const n200 = parseInt(next['200']) || 0;
+    const n100 = parseInt(next['100']) || 0;
+    const n50 = parseInt(next['50']) || 0;
+    const n20 = parseInt(next['20']) || 0;
+    const n10 = parseInt(next['10']) || 0;
+    const nCoins = parseFloat(next.coins) || 0;
+
+    const sum = (n500 * 500) + (n200 * 200) + (n100 * 100) + (n50 * 50) + (n20 * 20) + (n10 * 10) + nCoins;
+
+    if (n500 > 0 || n200 > 0 || n100 > 0 || n50 > 0 || n20 > 0 || n10 > 0 || nCoins > 0) {
+      setActualCashInHand(sum.toFixed(2));
+    } else if (clean === '') {
+      setActualCashInHand('');
+    }
+  };
+
+  const handleClearDenominations = () => {
+    setDenominations({
+      500: '',
+      200: '',
+      100: '',
+      50: '',
+      20: '',
+      10: '',
+      coins: ''
+    });
+    setActualCashInHand('');
+  };
+
   const handleFinalizeShift = async () => {
     if (!activeDuty) {
       alert('No active duty shift found to close.');
@@ -330,6 +427,31 @@ export const DutyClosingPage: React.FC<{ onNavigate: (page: string) => void }> =
         await updateFuelReading(r);
       }
 
+      const denomData = hasDenominations ? {
+        notes500: c500,
+        notes200: c200,
+        notes100: c100,
+        notes50: c50,
+        notes20: c20,
+        notes10: c10,
+        coins: cCoins,
+        totalNotes: totalDenominationNotes,
+        summaryText: [
+          c500 > 0 ? `500×${c500}` : '',
+          c200 > 0 ? `200×${c200}` : '',
+          c100 > 0 ? `100×${c100}` : '',
+          c50 > 0 ? `50×${c50}` : '',
+          c20 > 0 ? `20×${c20}` : '',
+          c10 > 0 ? `10×${c10}` : '',
+          cCoins > 0 ? `Coins:₹${cCoins}` : ''
+        ].filter(Boolean).join(', ')
+      } : undefined;
+
+      const formattedNotes = [
+        closingNotes.trim(),
+        denomData ? `[Cash Split: ${denomData.summaryText}]` : ''
+      ].filter(Boolean).join(' | ');
+
       const closed = await closeDutyShift({
         dutyId: activeDuty.id,
         shiftNumber: activeDuty.shiftNumber,
@@ -345,7 +467,8 @@ export const DutyClosingPage: React.FC<{ onNavigate: (page: string) => void }> =
         actualCashInHand: actualCash,
         differenceAmount: cashDifference,
         closingStatus,
-        notes: closingNotes.trim() || undefined
+        denominations: denomData,
+        notes: formattedNotes || undefined
       });
 
       setFinalizedClosing(closed);
@@ -536,6 +659,82 @@ export const DutyClosingPage: React.FC<{ onNavigate: (page: string) => void }> =
               </div>
             </div>
           </div>
+
+          {/* Physical Cash Denominations Handed Over Card */}
+          {finalizedClosing.denominations && (finalizedClosing.denominations.totalNotes || finalizedClosing.denominations.coins) ? (
+            <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm space-y-3">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+                <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
+                  <Banknote className="w-4 h-4 text-emerald-600" />
+                  Physical Cash Denominations Count & Note Split
+                </h3>
+                <span className="text-xs font-mono font-bold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200">
+                  {finalizedClosing.denominations.totalNotes || 0} Total Notes
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2.5 pt-1 text-xs">
+                {finalizedClosing.denominations.notes500 ? (
+                  <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-center space-y-1">
+                    <span className="text-[10px] font-bold text-slate-500 block uppercase">₹500 Notes</span>
+                    <span className="font-extrabold text-slate-900 text-base font-mono-numbers block">{finalizedClosing.denominations.notes500}</span>
+                    <span className="text-[10px] text-emerald-700 block font-bold font-mono-numbers">₹{(finalizedClosing.denominations.notes500 * 500).toLocaleString('en-IN')}</span>
+                  </div>
+                ) : null}
+
+                {finalizedClosing.denominations.notes200 ? (
+                  <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-center space-y-1">
+                    <span className="text-[10px] font-bold text-amber-800 block uppercase">₹200 Notes</span>
+                    <span className="font-extrabold text-amber-950 text-base font-mono-numbers block">{finalizedClosing.denominations.notes200}</span>
+                    <span className="text-[10px] text-amber-800 block font-bold font-mono-numbers">₹{(finalizedClosing.denominations.notes200 * 200).toLocaleString('en-IN')}</span>
+                  </div>
+                ) : null}
+
+                {finalizedClosing.denominations.notes100 ? (
+                  <div className="p-2.5 rounded-xl bg-indigo-50 border border-indigo-200 text-center space-y-1">
+                    <span className="text-[10px] font-bold text-indigo-800 block uppercase">₹100 Notes</span>
+                    <span className="font-extrabold text-indigo-950 text-base font-mono-numbers block">{finalizedClosing.denominations.notes100}</span>
+                    <span className="text-[10px] text-indigo-800 block font-bold font-mono-numbers">₹{(finalizedClosing.denominations.notes100 * 100).toLocaleString('en-IN')}</span>
+                  </div>
+                ) : null}
+
+                {finalizedClosing.denominations.notes50 ? (
+                  <div className="p-2.5 rounded-xl bg-cyan-50 border border-cyan-200 text-center space-y-1">
+                    <span className="text-[10px] font-bold text-cyan-800 block uppercase">₹50 Notes</span>
+                    <span className="font-extrabold text-cyan-950 text-base font-mono-numbers block">{finalizedClosing.denominations.notes50}</span>
+                    <span className="text-[10px] text-cyan-800 block font-bold font-mono-numbers">₹{(finalizedClosing.denominations.notes50 * 50).toLocaleString('en-IN')}</span>
+                  </div>
+                ) : null}
+
+                {finalizedClosing.denominations.notes20 ? (
+                  <div className="p-2.5 rounded-xl bg-lime-50 border border-lime-200 text-center space-y-1">
+                    <span className="text-[10px] font-bold text-lime-800 block uppercase">₹20 Notes</span>
+                    <span className="font-extrabold text-lime-950 text-base font-mono-numbers block">{finalizedClosing.denominations.notes20}</span>
+                    <span className="text-[10px] text-lime-800 block font-bold font-mono-numbers">₹{(finalizedClosing.denominations.notes20 * 20).toLocaleString('en-IN')}</span>
+                  </div>
+                ) : null}
+
+                {finalizedClosing.denominations.notes10 ? (
+                  <div className="p-2.5 rounded-xl bg-orange-50 border border-orange-200 text-center space-y-1">
+                    <span className="text-[10px] font-bold text-orange-800 block uppercase">₹10 Notes</span>
+                    <span className="font-extrabold text-orange-950 text-base font-mono-numbers block">{finalizedClosing.denominations.notes10}</span>
+                    <span className="text-[10px] text-orange-800 block font-bold font-mono-numbers">₹{(finalizedClosing.denominations.notes10 * 10).toLocaleString('en-IN')}</span>
+                  </div>
+                ) : null}
+
+                {finalizedClosing.denominations.coins ? (
+                  <div className="p-2.5 rounded-xl bg-yellow-50 border border-yellow-200 text-center space-y-1">
+                    <span className="text-[10px] font-bold text-yellow-800 block uppercase flex items-center justify-center gap-1">
+                      <Coins className="w-3 h-3 text-yellow-600" />
+                      Coins
+                    </span>
+                    <span className="font-extrabold text-yellow-950 text-base font-mono-numbers block">₹{finalizedClosing.denominations.coins.toLocaleString('en-IN')}</span>
+                    <span className="text-[10px] text-yellow-800 block font-bold font-mono-numbers">Loose Cash</span>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
 
           {/* Detailed Pump-by-Pump Meter Breakdown Table */}
           <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm space-y-3">
@@ -857,17 +1056,254 @@ export const DutyClosingPage: React.FC<{ onNavigate: (page: string) => void }> =
           </div>
 
           {/* STEP 3: Enter Actual Cash in Hand & Cash Reconciliation Comparison */}
-          <div className="glass-panel rounded-2xl p-6 border border-slate-800 space-y-4">
-            <h3 className="font-extrabold text-base text-slate-100 flex items-center gap-2">
-              <Banknote className="w-5 h-5 text-emerald-400" />
-              Step 3: Actual Cash in Hand & Audit Verification
-            </h3>
+          <div className="glass-panel rounded-2xl p-6 border border-slate-800 space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
+              <div>
+                <h3 className="font-extrabold text-base text-slate-100 flex items-center gap-2">
+                  <Banknote className="w-5 h-5 text-emerald-400" />
+                  Step 3: Actual Cash in Hand & Audit Verification
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Count notes using the denomination split below or enter the counted cash amount directly.
+                </p>
+              </div>
 
+              {hasDenominations && (
+                <button
+                  type="button"
+                  onClick={handleClearDenominations}
+                  className="px-3 py-1.5 rounded-xl bg-rose-950/60 hover:bg-rose-900/80 border border-rose-800 text-rose-300 text-xs font-bold flex items-center gap-1.5 transition-all self-start sm:self-auto shadow-sm"
+                  title="Reset all note counts and cash total"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>Clear Notes</span>
+                </button>
+              )}
+            </div>
+
+            {/* Currency Denominations Split Counter Grid */}
+            <div className="p-4 rounded-2xl bg-slate-950/80 border border-slate-800/90 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <Calculator className="w-4 h-4 text-emerald-400" />
+                  Cash Denomination & Note Split Counter
+                </span>
+                <span className="text-[11px] text-slate-400 font-mono">
+                  {totalDenominationNotes > 0 ? `${totalDenominationNotes} Total Notes` : 'Enter note quantities'}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-2.5">
+                {/* 500 Notes */}
+                <div className="p-2.5 rounded-xl border bg-slate-900/90 border-slate-700/80 flex flex-col justify-between space-y-1.5 hover:border-slate-500 transition-all">
+                  <div className="flex items-center justify-between">
+                    <span className="px-2 py-0.5 rounded-md text-xs font-black bg-stone-800 text-stone-200 border border-stone-600 font-mono">
+                      ₹500
+                    </span>
+                    <span className="text-[9px] text-stone-400 font-semibold uppercase">Note</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="text-[10px] text-slate-500 font-bold">×</span>
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder="0"
+                      value={denominations['500']}
+                      onChange={e => handleDenominationChange('500', e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-sm font-bold text-slate-100 font-mono-numbers text-center focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                  <div className="pt-1 border-t border-slate-800/80 flex items-center justify-between text-[11px] font-mono-numbers">
+                    <span className="text-slate-500 text-[9px]">Amt</span>
+                    <span className="font-extrabold text-emerald-400">₹{(c500 * 500).toLocaleString('en-IN')}</span>
+                  </div>
+                </div>
+
+                {/* 200 Notes */}
+                <div className="p-2.5 rounded-xl border bg-slate-900/90 border-amber-900/40 flex flex-col justify-between space-y-1.5 hover:border-amber-700/60 transition-all">
+                  <div className="flex items-center justify-between">
+                    <span className="px-2 py-0.5 rounded-md text-xs font-black bg-amber-950 text-amber-300 border border-amber-800 font-mono">
+                      ₹200
+                    </span>
+                    <span className="text-[9px] text-amber-400/70 font-semibold uppercase">Note</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="text-[10px] text-slate-500 font-bold">×</span>
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder="0"
+                      value={denominations['200']}
+                      onChange={e => handleDenominationChange('200', e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-sm font-bold text-slate-100 font-mono-numbers text-center focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                  <div className="pt-1 border-t border-slate-800/80 flex items-center justify-between text-[11px] font-mono-numbers">
+                    <span className="text-slate-500 text-[9px]">Amt</span>
+                    <span className="font-extrabold text-emerald-400">₹{(c200 * 200).toLocaleString('en-IN')}</span>
+                  </div>
+                </div>
+
+                {/* 100 Notes */}
+                <div className="p-2.5 rounded-xl border bg-slate-900/90 border-indigo-900/40 flex flex-col justify-between space-y-1.5 hover:border-indigo-700/60 transition-all">
+                  <div className="flex items-center justify-between">
+                    <span className="px-2 py-0.5 rounded-md text-xs font-black bg-indigo-950 text-indigo-300 border border-indigo-800 font-mono">
+                      ₹100
+                    </span>
+                    <span className="text-[9px] text-indigo-400/70 font-semibold uppercase">Note</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="text-[10px] text-slate-500 font-bold">×</span>
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder="0"
+                      value={denominations['100']}
+                      onChange={e => handleDenominationChange('100', e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-sm font-bold text-slate-100 font-mono-numbers text-center focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                  <div className="pt-1 border-t border-slate-800/80 flex items-center justify-between text-[11px] font-mono-numbers">
+                    <span className="text-slate-500 text-[9px]">Amt</span>
+                    <span className="font-extrabold text-emerald-400">₹{(c100 * 100).toLocaleString('en-IN')}</span>
+                  </div>
+                </div>
+
+                {/* 50 Notes */}
+                <div className="p-2.5 rounded-xl border bg-slate-900/90 border-cyan-900/40 flex flex-col justify-between space-y-1.5 hover:border-cyan-700/60 transition-all">
+                  <div className="flex items-center justify-between">
+                    <span className="px-2 py-0.5 rounded-md text-xs font-black bg-cyan-950 text-cyan-300 border border-cyan-800 font-mono">
+                      ₹50
+                    </span>
+                    <span className="text-[9px] text-cyan-400/70 font-semibold uppercase">Note</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="text-[10px] text-slate-500 font-bold">×</span>
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder="0"
+                      value={denominations['50']}
+                      onChange={e => handleDenominationChange('50', e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-sm font-bold text-slate-100 font-mono-numbers text-center focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                  <div className="pt-1 border-t border-slate-800/80 flex items-center justify-between text-[11px] font-mono-numbers">
+                    <span className="text-slate-500 text-[9px]">Amt</span>
+                    <span className="font-extrabold text-emerald-400">₹{(c50 * 50).toLocaleString('en-IN')}</span>
+                  </div>
+                </div>
+
+                {/* 20 Notes */}
+                <div className="p-2.5 rounded-xl border bg-slate-900/90 border-lime-900/40 flex flex-col justify-between space-y-1.5 hover:border-lime-700/60 transition-all">
+                  <div className="flex items-center justify-between">
+                    <span className="px-2 py-0.5 rounded-md text-xs font-black bg-lime-950 text-lime-300 border border-lime-800 font-mono">
+                      ₹20
+                    </span>
+                    <span className="text-[9px] text-lime-400/70 font-semibold uppercase">Note</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="text-[10px] text-slate-500 font-bold">×</span>
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder="0"
+                      value={denominations['20']}
+                      onChange={e => handleDenominationChange('20', e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-sm font-bold text-slate-100 font-mono-numbers text-center focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                  <div className="pt-1 border-t border-slate-800/80 flex items-center justify-between text-[11px] font-mono-numbers">
+                    <span className="text-slate-500 text-[9px]">Amt</span>
+                    <span className="font-extrabold text-emerald-400">₹{(c20 * 20).toLocaleString('en-IN')}</span>
+                  </div>
+                </div>
+
+                {/* 10 Notes */}
+                <div className="p-2.5 rounded-xl border bg-slate-900/90 border-orange-900/40 flex flex-col justify-between space-y-1.5 hover:border-orange-700/60 transition-all">
+                  <div className="flex items-center justify-between">
+                    <span className="px-2 py-0.5 rounded-md text-xs font-black bg-orange-950 text-orange-300 border border-orange-800 font-mono">
+                      ₹10
+                    </span>
+                    <span className="text-[9px] text-orange-400/70 font-semibold uppercase">Note</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="text-[10px] text-slate-500 font-bold">×</span>
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder="0"
+                      value={denominations['10']}
+                      onChange={e => handleDenominationChange('10', e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-sm font-bold text-slate-100 font-mono-numbers text-center focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                  <div className="pt-1 border-t border-slate-800/80 flex items-center justify-between text-[11px] font-mono-numbers">
+                    <span className="text-slate-500 text-[9px]">Amt</span>
+                    <span className="font-extrabold text-emerald-400">₹{(c10 * 10).toLocaleString('en-IN')}</span>
+                  </div>
+                </div>
+
+                {/* Coins */}
+                <div className="p-2.5 rounded-xl border bg-slate-900/90 border-yellow-900/40 flex flex-col justify-between space-y-1.5 hover:border-yellow-700/60 transition-all">
+                  <div className="flex items-center justify-between">
+                    <span className="px-2 py-0.5 rounded-md text-xs font-black bg-yellow-950 text-yellow-300 border border-yellow-800 font-mono flex items-center gap-1">
+                      <Coins className="w-3 h-3 text-yellow-400" />
+                      Coins
+                    </span>
+                    <span className="text-[9px] text-yellow-400/70 font-semibold uppercase">Loose</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="text-[10px] text-slate-500 font-bold">₹</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="1"
+                      placeholder="0"
+                      value={denominations.coins}
+                      onChange={e => handleDenominationChange('coins', e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-sm font-bold text-slate-100 font-mono-numbers text-center focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                  <div className="pt-1 border-t border-slate-800/80 flex items-center justify-between text-[11px] font-mono-numbers">
+                    <span className="text-slate-500 text-[9px]">Amt</span>
+                    <span className="font-extrabold text-emerald-400">₹{cCoins.toLocaleString('en-IN')}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Subtotal Banner inside Denomination Split */}
+              <div className="pt-2 border-t border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="text-slate-400">Total Currency Notes Counted:</span>
+                  <span className="font-bold text-slate-100 bg-slate-800 px-2.5 py-0.5 rounded-md border border-slate-700 font-mono">
+                    {totalDenominationNotes} Notes
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-slate-400">Split Total Cash:</span>
+                  <span className="text-sm font-extrabold text-emerald-400 font-mono-numbers">
+                    ₹{totalDenominationAmount.toFixed(2)}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Inputs: Actual Physical Cash & Audit Notes */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-bold text-slate-200 mb-1.5">
-                  Actual Physical Cash Counted in Hand (₹)
-                </label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-bold text-slate-200">
+                    Actual Physical Cash Counted in Hand (₹)
+                  </label>
+                  {hasDenominations && (
+                    <span className="text-[10px] font-bold text-emerald-400 bg-emerald-950/80 border border-emerald-800/80 px-2 py-0.5 rounded-md flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3" />
+                      Auto-summed from Notes
+                    </span>
+                  )}
+                </div>
                 <div className="relative">
                   <input
                     type="number"

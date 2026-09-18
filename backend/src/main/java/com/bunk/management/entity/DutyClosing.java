@@ -44,6 +44,7 @@ public class DutyClosing {
     private ClosingStatus closingStatus;
 
     private String notes;
+    private Object denominations;
 
     private LocalDateTime closedAt;
 
