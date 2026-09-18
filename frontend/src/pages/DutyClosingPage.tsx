@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useDuty } from '../context/DutyContext';
 import { useAuth } from '../context/AuthContext';
-import { FuelReading, CreditEntry, PaymentEntry, ExpenseEntry, ClosingStatus, DutyClosing, ProductType } from '../types';
+import { FuelReading, CreditEntry, PaymentEntry, ExpenseEntry, ClosingStatus, DutyClosing, ProductType, TankStockEntry, ClosingTankStock } from '../types';
 import { db } from '../db/db';
+import { syncEngine } from '../sync/syncEngine';
 import {
   FileCheck,
   CheckCircle2,
@@ -23,7 +24,8 @@ import {
   Share2,
   Calculator,
   Coins,
-  RotateCcw
+  RotateCcw,
+  Layers
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -39,6 +41,14 @@ export const DutyClosingPage: React.FC<{ onNavigate: (page: string) => void }> =
   const [closingNotes, setClosingNotes] = useState<string>('');
   const [isClosing, setIsClosing] = useState(false);
   const [finalizedClosing, setFinalizedClosing] = useState<DutyClosing | null>(null);
+
+  // Closing Tank Stock State (MS Petrol & HSD Diesel Dip Levels, Stock Liters, and Stock Notes)
+  const [msClosingDip, setMsClosingDip] = useState<string>('');
+  const [msClosingStock, setMsClosingStock] = useState<string>('');
+  const [hsdClosingDip, setHsdClosingDip] = useState<string>('');
+  const [hsdClosingStock, setHsdClosingStock] = useState<string>('');
+  const [tankStockNotes, setTankStockNotes] = useState<string>('');
+  const [lastRecordedStock, setLastRecordedStock] = useState<TankStockEntry | null>(null);
 
   // Cash Denominations Note Split State: 500, 200, 100, 50, 20, 10 notes & loose coins
   const [denominations, setDenominations] = useState<{
@@ -130,6 +140,20 @@ export const DutyClosingPage: React.FC<{ onNavigate: (page: string) => void }> =
       if (c.denominations.coins) text += ` • Coins: ₹${c.denominations.coins.toLocaleString('en-IN')}\n`;
       text += `   ↳ *Total Notes: ${c.denominations.totalNotes || 0} | Total Handover: ₹${c.actualCashInHand.toFixed(2)}*\n`;
     }
+
+    if (c.tankStock && (c.tankStock.msStockLiters || c.tankStock.hsdStockLiters || c.tankStock.msDipLevel || c.tankStock.hsdDipLevel || c.tankStock.stockNotes)) {
+      text += `\n⛽ *UNDERGROUND TANK CLOSING STOCK & DIP:*\n`;
+      if (c.tankStock.msStockLiters || c.tankStock.msDipLevel) {
+        text += ` • 🟢 *Petrol (MS) Tank:* ${c.tankStock.msStockLiters ? c.tankStock.msStockLiters.toLocaleString('en-IN') + ' L' : '-'} (Dip: ${c.tankStock.msDipLevel || '-'})\n`;
+      }
+      if (c.tankStock.hsdStockLiters || c.tankStock.hsdDipLevel) {
+        text += ` • 🟡 *Diesel (HSD) Tank:* ${c.tankStock.hsdStockLiters ? c.tankStock.hsdStockLiters.toLocaleString('en-IN') + ' L' : '-'} (Dip: ${c.tankStock.hsdDipLevel || '-'})\n`;
+      }
+      if (c.tankStock.stockNotes) {
+        text += ` • 📝 *Stock Remarks:* ${c.tankStock.stockNotes}\n`;
+      }
+    }
+
     if (c.notes) text += `📝 *Notes:* ${c.notes}\n`;
     text += `\n📍 *Bharat Petroleum Highway Hub*`;
 
@@ -141,6 +165,13 @@ export const DutyClosingPage: React.FC<{ onNavigate: (page: string) => void }> =
     csv += "--- SHIFT SUMMARY ---\n";
     csv += "Shift Number,Lead Cashier,Settled By Admin,Closed At,Gross Sales (INR),Credit Given (INR),Daily Expenses (INR),Expected Cash Handover (INR),Actual Cash Handed (INR),Difference (INR),Audit Status\n";
     csv += `"${c.shiftNumber}","${c.cashierName}","${c.closedByAdminName}","${new Date(c.closedAt).toLocaleString('en-IN')}",${c.grossFuelSalesAmount},${c.creditGivenAmount},${c.dailyExpensesAmount || 0},${c.expectedCashBalance},${c.actualCashInHand},${c.differenceAmount},"${c.closingStatus}"\n\n`;
+
+    if (c.tankStock && (c.tankStock.msStockLiters || c.tankStock.hsdStockLiters || c.tankStock.stockNotes)) {
+      csv += "--- CLOSING UNDERGROUND TANK STOCK & DIP ---\n";
+      csv += "Product Tank,Closing Dip Level,Closing Stock (Liters),Stock Audit Notes\n";
+      csv += `"Petrol (MS) Tank","${c.tankStock.msDipLevel || '-'}",${c.tankStock.msStockLiters || 0},"${c.tankStock.stockNotes || '-'}"\n`;
+      csv += `"Diesel (HSD) Tank","${c.tankStock.hsdDipLevel || '-'}",${c.tankStock.hsdStockLiters || 0},"${c.tankStock.stockNotes || '-'}"\n\n`;
+    }
 
     if (c.denominations && (c.denominations.totalNotes || c.denominations.coins)) {
       csv += "--- CASH DENOMINATION & NOTE SPLIT ---\n";
@@ -231,6 +262,12 @@ export const DutyClosingPage: React.FC<{ onNavigate: (page: string) => void }> =
     const pastClosings = await db.dutyClosings.reverse().toArray();
     if (pastClosings.length > 0) {
       setPreviousClosing(pastClosings[0]);
+    }
+
+    // Load most recent tank stock for opening/reference display
+    const stocks = await db.tankStocks.reverse().toArray();
+    if (stocks.length > 0) {
+      setLastRecordedStock(stocks[0]);
     }
   };
 
@@ -447,9 +484,55 @@ export const DutyClosingPage: React.FC<{ onNavigate: (page: string) => void }> =
         ].filter(Boolean).join(', ')
       } : undefined;
 
+      // Process Underground Tank Closing Stock & Notes if entered
+      const hasStockEntered = Boolean(
+        msClosingStock.trim() || hsdClosingStock.trim() || msClosingDip.trim() || hsdClosingDip.trim() || tankStockNotes.trim()
+      );
+
+      let tankStockData: ClosingTankStock | undefined = undefined;
+
+      if (hasStockEntered) {
+        const parsedMsStock = parseFloat(msClosingStock) || 0;
+        const parsedHsdStock = parseFloat(hsdClosingStock) || 0;
+        const stockId = 'stock-shift-' + activeDuty.id + '-' + Date.now().toString().slice(-4);
+
+        const newStockEntry: TankStockEntry = {
+          id: stockId,
+          date: new Date().toISOString().slice(0, 10),
+          period: 'SHIFT_END',
+          shiftName: `${activeDuty.shiftNumber} Closing Tank Stock`,
+          msAtgDipLevel: msClosingDip.trim() || (lastRecordedStock?.msAtgDipLevel ?? '-'),
+          msAtgStock: parsedMsStock || (lastRecordedStock?.msAtgStock ?? 0),
+          hsdAtgDipLevel: hsdClosingDip.trim() || (lastRecordedStock?.hsdAtgDipLevel ?? '-'),
+          hsdAtgStock: parsedHsdStock || (lastRecordedStock?.hsdAtgStock ?? 0),
+          recordedByAdminId: currentUser?.id || 'admin',
+          recordedByAdminName: currentUser?.fullName || 'Admin',
+          timestamp: new Date().toISOString(),
+          synced: false
+        };
+
+        await db.tankStocks.put(newStockEntry);
+        await syncEngine.enqueue('TANK_STOCK', 'CREATE', stockId, newStockEntry);
+
+        tankStockData = {
+          msDipLevel: msClosingDip.trim() || undefined,
+          msStockLiters: parsedMsStock || undefined,
+          hsdDipLevel: hsdClosingDip.trim() || undefined,
+          hsdStockLiters: parsedHsdStock || undefined,
+          stockNotes: tankStockNotes.trim() || undefined
+        };
+      }
+
+      const stockSummary = tankStockData ? [
+        tankStockData.msStockLiters ? `Petrol:${tankStockData.msStockLiters}L (${tankStockData.msDipLevel || '-'})` : '',
+        tankStockData.hsdStockLiters ? `Diesel:${tankStockData.hsdStockLiters}L (${tankStockData.hsdDipLevel || '-'})` : '',
+        tankStockData.stockNotes ? `Stock Note:${tankStockData.stockNotes}` : ''
+      ].filter(Boolean).join(', ') : '';
+
       const formattedNotes = [
         closingNotes.trim(),
-        denomData ? `[Cash Split: ${denomData.summaryText}]` : ''
+        denomData ? `[Cash Split: ${denomData.summaryText}]` : '',
+        stockSummary ? `[Closing Stock: ${stockSummary}]` : ''
       ].filter(Boolean).join(' | ');
 
       const closed = await closeDutyShift({
@@ -468,6 +551,7 @@ export const DutyClosingPage: React.FC<{ onNavigate: (page: string) => void }> =
         differenceAmount: cashDifference,
         closingStatus,
         denominations: denomData,
+        tankStock: tankStockData,
         notes: formattedNotes || undefined
       });
 
@@ -733,6 +817,66 @@ export const DutyClosingPage: React.FC<{ onNavigate: (page: string) => void }> =
                   </div>
                 ) : null}
               </div>
+            </div>
+          ) : null}
+
+          {/* Underground Tank Closing Stock & Notes Card */}
+          {finalizedClosing.tankStock && (finalizedClosing.tankStock.msStockLiters || finalizedClosing.tankStock.hsdStockLiters || finalizedClosing.tankStock.msDipLevel || finalizedClosing.tankStock.hsdDipLevel || finalizedClosing.tankStock.stockNotes) ? (
+            <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm space-y-3">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+                <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
+                  <Layers className="w-4 h-4 text-teal-600" />
+                  Underground Tank Closing Stock & Notes
+                </h3>
+                <span className="text-[11px] font-bold text-teal-700 bg-teal-50 border border-teal-200 px-2.5 py-0.5 rounded-full">
+                  Shift Closing Stock Audit
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                {/* Petrol Tank */}
+                <div className="p-3.5 rounded-xl bg-sky-50/80 border border-sky-200 flex items-center justify-between">
+                  <div>
+                    <span className="text-[10px] font-bold text-sky-800 uppercase block">
+                      Petrol (MS) Closing Tank
+                    </span>
+                    <p className="text-base font-black font-mono-numbers text-sky-950 mt-0.5">
+                      {finalizedClosing.tankStock.msStockLiters ? `${finalizedClosing.tankStock.msStockLiters.toLocaleString('en-IN')} Liters` : 'Stock not entered'}
+                    </p>
+                  </div>
+                  {finalizedClosing.tankStock.msDipLevel && (
+                    <span className="px-2.5 py-1 rounded-lg bg-white border border-sky-300 font-mono-numbers font-bold text-sky-900 text-xs">
+                      Dip: {finalizedClosing.tankStock.msDipLevel}
+                    </span>
+                  )}
+                </div>
+
+                {/* Diesel Tank */}
+                <div className="p-3.5 rounded-xl bg-amber-50/80 border border-amber-200 flex items-center justify-between">
+                  <div>
+                    <span className="text-[10px] font-bold text-amber-800 uppercase block">
+                      Diesel (HSD) Closing Tank
+                    </span>
+                    <p className="text-base font-black font-mono-numbers text-amber-950 mt-0.5">
+                      {finalizedClosing.tankStock.hsdStockLiters ? `${finalizedClosing.tankStock.hsdStockLiters.toLocaleString('en-IN')} Liters` : 'Stock not entered'}
+                    </p>
+                  </div>
+                  {finalizedClosing.tankStock.hsdDipLevel && (
+                    <span className="px-2.5 py-1 rounded-lg bg-white border border-amber-300 font-mono-numbers font-bold text-amber-900 text-xs">
+                      Dip: {finalizedClosing.tankStock.hsdDipLevel}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {finalizedClosing.tankStock.stockNotes && (
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700 space-y-1">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase block">
+                    Stock Audit Observations / Notes:
+                  </span>
+                  <p className="font-medium">{finalizedClosing.tankStock.stockNotes}</p>
+                </div>
+              )}
             </div>
           ) : null}
 
@@ -1013,11 +1157,164 @@ export const DutyClosingPage: React.FC<{ onNavigate: (page: string) => void }> =
             </div>
           </div>
 
-          {/* STEP 2: Shift Cash Reconciliation Formula */}
+          {/* STEP 2: Underground Tank Closing Stock & Stock Notes */}
+          <div className="glass-panel rounded-2xl p-6 border border-slate-800 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
+              <div>
+                <h3 className="font-extrabold text-base text-slate-100 flex items-center gap-2">
+                  <Layers className="w-5 h-5 text-teal-400" />
+                  Step 2: Closing Underground Tank Stock & Stock Notes
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Record closing dip levels, remaining stock liters, and stock audit notes for shift handover.
+                </p>
+              </div>
+
+              {lastRecordedStock && (
+                <div className="text-[11px] font-mono text-slate-400 bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-800 self-start sm:self-auto">
+                  <span className="text-slate-500">Last Stock:</span>{' '}
+                  <span className="text-sky-300 font-bold">Petrol {lastRecordedStock.msAtgStock}L</span> |{' '}
+                  <span className="text-amber-300 font-bold">Diesel {lastRecordedStock.hsdAtgStock}L</span>
+                </div>
+              )}
+            </div>
+
+            {/* Petrol & Diesel Tank Inputs */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Petrol (MS) Tank */}
+              <div className="p-4 rounded-2xl bg-slate-900/90 border border-sky-900/40 space-y-3 hover:border-sky-700/60 transition-all">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black text-sky-300 uppercase tracking-wider flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-sky-400"></span>
+                    Petrol (MS) Underground Tank
+                  </span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-sky-950 text-sky-400 border border-sky-800">
+                    Motor Spirit
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">
+                      Closing Dip Level
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 142.5 cm"
+                      value={msClosingDip}
+                      onChange={e => setMsClosingDip(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-2 text-xs font-bold text-slate-100 font-mono-numbers focus:outline-none focus:border-sky-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">
+                      Remaining Stock (Liters)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.1"
+                      placeholder={lastRecordedStock?.msAtgStock ? `${lastRecordedStock.msAtgStock}` : "e.g. 12500"}
+                      value={msClosingStock}
+                      onChange={e => setMsClosingStock(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-2 text-xs font-bold text-sky-400 font-mono-numbers focus:outline-none focus:border-sky-500"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Diesel (HSD) Tank */}
+              <div className="p-4 rounded-2xl bg-slate-900/90 border border-amber-900/40 space-y-3 hover:border-amber-700/60 transition-all">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
+                    Diesel (HSD) Underground Tank
+                  </span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-950 text-amber-400 border border-amber-800">
+                    High Speed Diesel
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">
+                      Closing Dip Level
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 185.0 cm"
+                      value={hsdClosingDip}
+                      onChange={e => setHsdClosingDip(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-2 text-xs font-bold text-slate-100 font-mono-numbers focus:outline-none focus:border-amber-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">
+                      Remaining Stock (Liters)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.1"
+                      placeholder={lastRecordedStock?.hsdAtgStock ? `${lastRecordedStock.hsdAtgStock}` : "e.g. 16200"}
+                      value={hsdClosingStock}
+                      onChange={e => setHsdClosingStock(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-2 text-xs font-bold text-amber-400 font-mono-numbers focus:outline-none focus:border-amber-500"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Note of Stock / Observations */}
+            <div className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800/80 space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-bold text-slate-200">
+                  Note of Stock / Tank Audit Observations
+                </label>
+                <span className="text-[10px] text-slate-400">
+                  Click quick tags below to auto-append
+                </span>
+              </div>
+
+              <textarea
+                rows={2}
+                placeholder="e.g. Water dip tested: 0mm. ATG vs manual dip verified. Tanker decanting received 4000L. Density: MS 745, HSD 832."
+                value={tankStockNotes}
+                onChange={e => setTankStockNotes(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-teal-500"
+              />
+
+              {/* Quick Tags for Note of Stock */}
+              <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                {[
+                  'Water Dip: 0mm',
+                  'Density Verified OK',
+                  'ATG Dip Matched Manual',
+                  'No Water Found',
+                  'Tanker Decanted',
+                  'Stock Levels Audited'
+                ].map(tag => (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => {
+                      setTankStockNotes(prev => prev ? `${prev}, ${tag}` : tag);
+                    }}
+                    className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 transition-all hover:text-teal-300 hover:border-teal-700"
+                  >
+                    + {tag}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* STEP 3: Shift Cash Reconciliation Formula */}
           <div className="glass-panel rounded-2xl p-6 border border-slate-800 space-y-4">
             <h3 className="font-extrabold text-base text-slate-100 flex items-center gap-2">
               <Receipt className="w-5 h-5 text-amber-400" />
-              Step 2: Expected Balance Calculation Formula
+              Step 3: Expected Balance Calculation Formula
             </h3>
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs">
@@ -1055,13 +1352,13 @@ export const DutyClosingPage: React.FC<{ onNavigate: (page: string) => void }> =
             </div>
           </div>
 
-          {/* STEP 3: Enter Actual Cash in Hand & Cash Reconciliation Comparison */}
+          {/* STEP 4: Enter Actual Cash in Hand & Cash Reconciliation Comparison */}
           <div className="glass-panel rounded-2xl p-6 border border-slate-800 space-y-5">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
               <div>
                 <h3 className="font-extrabold text-base text-slate-100 flex items-center gap-2">
                   <Banknote className="w-5 h-5 text-emerald-400" />
-                  Step 3: Actual Cash in Hand & Audit Verification
+                  Step 4: Actual Cash in Hand & Audit Verification
                 </h3>
                 <p className="text-xs text-slate-400 mt-0.5">
                   Count notes using the denomination split below or enter the counted cash amount directly.

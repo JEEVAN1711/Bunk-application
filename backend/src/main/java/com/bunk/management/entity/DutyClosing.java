@@ -45,6 +45,7 @@ public class DutyClosing {
 
     private String notes;
     private Object denominations;
+    private Object tankStock;
 
     private LocalDateTime closedAt;
 

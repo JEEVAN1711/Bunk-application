@@ -211,6 +211,7 @@ public class SyncService {
                             .closingStatus(ClosingStatus.valueOf((String) p.get("closingStatus")))
                             .notes((String) p.get("notes"))
                             .denominations(p.get("denominations"))
+                            .tankStock(p.get("tankStock"))
                             .closedAt(LocalDateTime.now())
                             .isLocked(true)
                             .build();

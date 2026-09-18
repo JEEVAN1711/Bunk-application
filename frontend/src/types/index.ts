@@ -152,6 +152,14 @@ export interface CashDenominations {
   summaryText?: string;
 }
 
+export interface ClosingTankStock {
+  msDipLevel?: string;
+  msStockLiters?: number;
+  hsdDipLevel?: string;
+  hsdStockLiters?: number;
+  stockNotes?: string;
+}
+
 export interface DutyClosing {
   id: string;
   dutyId: string;
@@ -169,6 +177,7 @@ export interface DutyClosing {
   differenceAmount: number; // actual - expected
   closingStatus: ClosingStatus;
   denominations?: CashDenominations;
+  tankStock?: ClosingTankStock;
   notes?: string;
   closedAt: string;
   isLocked: boolean;
