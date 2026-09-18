@@ -1,0 +1,15 @@
+services:
+  # Spring Boot Backend Web Service on Render Cloud
+  - type: web
+    name: bunk-management-backend
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /api/sync/status
+    envVars:
+      - key: MONGODB_URI
+        value: "mongodb+srv://jeevanmoorthi1711_db_user:BunkPass2026%21@bunk.fugqtce.mongodb.net/bunkdb?retryWrites=true&w=majority"
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      - key: FAST2SMS_API_KEY
+        value: KfWMvE2Id76x1XAtjTQPsO9kUlriCHoJbc5a8Y4ezpn0NwRyGF9yNlarVRXWGDv6bKgmJ7sfCHhLTdAB

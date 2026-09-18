@@ -1,0 +1,279 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-main: #f8fafc;
+  --panel-bg: rgba(255, 255, 255, 0.96);
+  --card-bg: #ffffff;
+  --border-color: #e2e8f0;
+  --text-main: #000000;
+  --text-muted: #1e293b;
+  --accent-color: #0284c7;
+}
+
+body {
+  margin: 0;
+  background-color: #f8fafc;
+  color: #0f172a;
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+  position: relative;
+}
+
+/* Vivid, elegant Bharat Petroleum station image background */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url('/assets/bunk_bg.jpg');
+  background-size: cover;
+  background-position: center top;
+  background-repeat: no-repeat;
+  opacity: 0.12;
+  filter: saturate(1.15) contrast(1.05);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* High-contrast pure black text overrides */
+.text-slate-100,
+.text-slate-200 {
+  color: #000000 !important;
+}
+
+.text-slate-300,
+.text-slate-400 {
+  color: #0f172a !important;
+}
+
+.text-slate-500 {
+  color: #334155 !important;
+}
+
+.text-slate-600 {
+  color: #475569 !important;
+}
+
+/* Crisp Light Surfaces across all Slate background classes */
+.bg-slate-950,
+.bg-slate-900 {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #e2e8f0 !important;
+}
+
+.bg-slate-800,
+.bg-slate-700 {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+
+.bg-slate-900\/40,
+.bg-slate-900\/50,
+.bg-slate-900\/60,
+.bg-slate-900\/70,
+.bg-slate-900\/80,
+.bg-slate-900\/90 {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+  color: #0f172a !important;
+}
+
+.bg-slate-800\/40,
+.bg-slate-800\/60,
+.bg-slate-800\/70,
+.bg-slate-800\/80,
+.bg-slate-800\/90 {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+}
+
+.bg-slate-950\/70,
+.bg-slate-950\/80,
+.bg-slate-950\/85,
+.bg-slate-950\/90 {
+  background-color: rgba(255, 255, 255, 0.98) !important;
+  color: #0f172a !important;
+}
+
+.border-slate-800,
+.border-slate-700 {
+  border-color: #e2e8f0 !important;
+}
+
+.hover\:bg-slate-800:hover,
+.hover\:bg-slate-700:hover {
+  background-color: #e2e8f0 !important;
+  color: #000000 !important;
+}
+
+/* High Visibility Role Badges */
+.bg-amber-950,
+.bg-amber-950\/40,
+.bg-amber-950\/60,
+.bg-amber-950\/80 {
+  background-color: #fef3c7 !important;
+  color: #92400e !important;
+  border-color: #fcd34d !important;
+}
+
+.text-amber-300,
+.text-amber-400 {
+  color: #b45309 !important;
+}
+
+.bg-emerald-950,
+.bg-emerald-950\/40,
+.bg-emerald-950\/60,
+.bg-emerald-950\/80 {
+  background-color: #d1fae5 !important;
+  color: #065f46 !important;
+  border-color: #6ee7b7 !important;
+}
+
+.text-emerald-300,
+.text-emerald-400 {
+  color: #047857 !important;
+}
+
+.bg-sky-950,
+.bg-sky-950\/40,
+.bg-sky-950\/60,
+.bg-sky-950\/80 {
+  background-color: #e0f2fe !important;
+  color: #0369a1 !important;
+  border-color: #7dd3fc !important;
+}
+
+.text-sky-300,
+.text-sky-400 {
+  color: #0284c7 !important;
+}
+
+.bg-purple-950,
+.bg-purple-950\/40,
+.bg-purple-950\/60,
+.bg-purple-950\/80 {
+  background-color: #f3e8ff !important;
+  color: #6b21a8 !important;
+  border-color: #d8b4fe !important;
+}
+
+.text-purple-300,
+.text-purple-400 {
+  color: #7e22ce !important;
+}
+
+.bg-rose-950,
+.bg-rose-950\/40,
+.bg-rose-950\/60,
+.bg-rose-950\/80 {
+  background-color: #ffe4e6 !important;
+  color: #9f1239 !important;
+  border-color: #fca5a5 !important;
+}
+
+.text-rose-300,
+.text-rose-400 {
+  color: #be123c !important;
+}
+
+/* Glass Panels & Cards */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.96) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+  color: #0f172a !important;
+}
+
+.glass-card {
+  background: #ffffff !important;
+  backdrop-filter: blur(8px);
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.05) !important;
+  color: #0f172a !important;
+}
+
+.glass-card-hover {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.glass-card-hover:hover {
+  transform: translateY(-2px);
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 12px 28px -5px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Form Inputs & Selects */
+input,
+select,
+textarea {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  border-color: #cbd5e1 !important;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #64748b !important;
+}
+
+/* Glowing Elements on Light Theme */
+.glow-emerald {
+  box-shadow: 0 0 15px -3px rgba(16, 185, 129, 0.25);
+}
+.glow-amber {
+  box-shadow: 0 0 15px -3px rgba(245, 158, 11, 0.25);
+}
+.glow-rose {
+  box-shadow: 0 0 15px -3px rgba(244, 63, 94, 0.25);
+}
+.glow-sky {
+  box-shadow: 0 0 15px -3px rgba(14, 165, 233, 0.25);
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Mono Numbers */
+.font-mono-numbers {
+  font-family: 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Print Styles */
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-only {
+    display: block !important;
+  }
+  .glass-panel, .glass-card {
+    background: white !important;
+    border: 1px solid #ddd !important;
+    color: black !important;
+    backdrop-filter: none !important;
+    box-shadow: none !important;
+  }
+}
