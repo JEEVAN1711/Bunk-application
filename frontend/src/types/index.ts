@@ -198,7 +198,7 @@ export interface PaymentRequest {
 
 export interface SyncQueueItem {
   id?: number;
-  entityType: 'CREDIT' | 'PAYMENT' | 'CUSTOMER' | 'DUTY' | 'READING' | 'DUTY_CLOSING' | 'PAYMENT_REQUEST' | 'USER' | 'EXPENSE' | 'TANK_STOCK';
+  entityType: 'CREDIT' | 'PAYMENT' | 'CUSTOMER' | 'DUTY' | 'READING' | 'DUTY_CLOSING' | 'PAYMENT_REQUEST' | 'USER' | 'EXPENSE' | 'TANK_STOCK' | 'AGENCY';
   action: 'CREATE' | 'UPDATE' | 'DELETE';
   payload: any;
   syncId: string;
@@ -211,4 +211,16 @@ export interface ProductPricing {
   PETROL: number;
   DIESEL: number;
   OIL: number;
+}
+
+export interface Agency {
+  id: string;
+  name: string;          // e.g. "Bharat Petroleum - Anna Nagar"
+  code: string;          // short unique code e.g. "BP-AN01"
+  ownerName: string;
+  phone: string;
+  address?: string;
+  logoUrl?: string;
+  createdAt: string;
+  synced?: boolean;
 }

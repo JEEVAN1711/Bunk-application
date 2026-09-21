@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useAgency } from '../context/AgencyContext';
 import { useSync } from '../context/SyncContext';
 import { useDuty } from '../context/DutyContext';
 import { useTheme } from '../context/ThemeContext';
@@ -15,11 +16,13 @@ import {
   Clock,
   LogOut,
   AlertCircle,
-  Palette
+  Palette,
+  Building2
 } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
   const { currentUser, switchUser, allUsers, logout } = useAuth();
+  const { currentAgency, clearAgency } = useAgency();
   const { status, pendingCount, triggerSync } = useSync();
   const { activeDuty, pricing } = useDuty();
   const { theme, setTheme } = useTheme();
@@ -81,11 +84,15 @@ export const Navbar: React.FC = () => {
                 <span className="font-black text-lg tracking-tight text-slate-900">
                   BUNK PRO
                 </span>
-                <span className="text-[10px] uppercase font-extrabold tracking-widest px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
-                  Bharat Petroleum
-                </span>
+                {currentAgency && (
+                  <span className="text-[10px] uppercase font-extrabold tracking-widest px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 truncate max-w-[180px]">
+                    {currentAgency.name}
+                  </span>
+                )}
               </div>
-              <p className="text-[11px] text-slate-500 font-medium">Fuel Station Management</p>
+              <p className="text-[11px] text-slate-500 font-medium">
+                {currentAgency ? `Code: ${currentAgency.code}` : 'Fuel Station Management'}
+              </p>
             </div>
           </div>
 
@@ -252,16 +259,18 @@ export const Navbar: React.FC = () => {
                   <button
                     onClick={() => {
                       logout();
+                      clearAgency();
                       setDropdownOpen(false);
                     }}
-                    className="w-full flex items-center justify-center gap-2 p-2.5 rounded-2xl text-xs font-bold text-slate-900 bg-slate-100 hover:bg-slate-200 transition-all border border-slate-300 shadow-sm"
+                    className="w-full flex items-center justify-center gap-2 p-2.5 rounded-2xl text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 transition-all border border-indigo-200 shadow-sm"
                   >
-                    <UserCheck className="w-3.5 h-3.5 text-blue-600" />
-                    Switch User / Sign In Again
+                    <Building2 className="w-3.5 h-3.5" />
+                    Switch Agency
                   </button>
                   <button
                     onClick={() => {
                       logout();
+                      clearAgency();
                       setDropdownOpen(false);
                     }}
                     className="w-full flex items-center justify-center gap-2 p-2 rounded-2xl text-xs font-bold text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 transition-all"

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { AgencyProvider, useAgency } from './context/AgencyContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { DutyProvider, useDuty } from './context/DutyContext';
 import { SyncProvider } from './context/SyncContext';
@@ -14,9 +15,11 @@ import { HistoricalLedgerPage } from './pages/HistoricalLedgerPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { InitialSetupPage } from './pages/auth/InitialSetupPage';
 import { LoginPage } from './pages/auth/LoginPage';
+import { AgencySelectPage } from './pages/auth/AgencySelectPage';
 import { InternetOfflineModal } from './components/InternetOfflineModal';
 
 const AppContent: React.FC = () => {
+  const { currentAgency, allAgencies, loading: agencyLoading } = useAgency();
   const { currentUser, isInitialSetup } = useAuth();
   const [currentPage, setCurrentPage] = useState<string>(() => {
     const saved = localStorage.getItem('bunk_current_page');
@@ -29,12 +32,29 @@ const AppContent: React.FC = () => {
     localStorage.setItem('bunk_current_page', page);
   };
 
-  // If no users exist in database, display initial Setup Wizard
+  // Show loading while agency data loads
+  if (agencyLoading) {
+    return (
+      <div className="min-h-screen bg-[#080c14] flex items-center justify-center text-emerald-400">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin"></div>
+          <p className="font-semibold text-lg tracking-wide">Loading BUNK PRO...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // GATE 1: No agency selected → show agency selection page
+  if (!currentAgency) {
+    return <AgencySelectPage />;
+  }
+
+  // GATE 2: Agency selected but no users → show initial setup (create admin for this agency)
   if (isInitialSetup) {
     return <InitialSetupPage />;
   }
 
-  // If users exist but no active session is selected, display Login page
+  // GATE 3: Users exist but no active session → show login page
   if (!currentUser) {
     return <LoginPage />;
   }
@@ -95,14 +115,16 @@ const AppContent: React.FC = () => {
 export function App() {
   return (
     <ThemeProvider>
-      <AuthProvider>
-        <DutyProvider>
-          <SyncProvider>
-            <InternetOfflineModal />
-            <AppContent />
-          </SyncProvider>
-        </DutyProvider>
-      </AuthProvider>
+      <AgencyProvider>
+        <AuthProvider>
+          <DutyProvider>
+            <SyncProvider>
+              <InternetOfflineModal />
+              <AppContent />
+            </SyncProvider>
+          </DutyProvider>
+        </AuthProvider>
+      </AgencyProvider>
     </ThemeProvider>
   );
 }

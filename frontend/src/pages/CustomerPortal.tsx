@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Customer, CreditEntry, PaymentEntry, PaymentRequest } from '../types';
+import { useAgency } from '../context/AgencyContext';
+import { Customer, CreditEntry, PaymentEntry, PaymentRequest, CustomerAccessStatus } from '../types';
 import { db } from '../db/db';
+import { syncEngine } from '../sync/syncEngine';
 import {
   CreditCard,
   Banknote,
@@ -13,19 +15,20 @@ import {
   Receipt,
   FileText,
   ShieldCheck,
-  Lock,
-  ShieldAlert,
   ChevronDown,
   Users,
   Download,
   Calendar,
   Filter,
   FileSpreadsheet,
-  RotateCcw
+  RotateCcw,
+  LogOut,
+  Phone
 } from 'lucide-react';
 
 export const CustomerPortal: React.FC = () => {
-  const { currentUser } = useAuth();
+  const { currentUser, logout } = useAuth();
+  const { currentAgency, clearAgency } = useAgency();
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [allCustomers, setAllCustomers] = useState<Customer[]>([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>(() => {
@@ -101,6 +104,7 @@ export const CustomerPortal: React.FC = () => {
     }
   };
 
+
   useEffect(() => {
     loadCustomerData();
     const interval = setInterval(loadCustomerData, 3000);
@@ -143,75 +147,6 @@ export const CustomerPortal: React.FC = () => {
     );
   }
 
-  // 1. LOCKED for Admin Reconciliation / Data Correction
-  if (customer.accessStatus === 'LOCKED') {
-    return (
-      <div className="min-h-[70vh] flex flex-col items-center justify-center p-4">
-        {isAdmin && allCustomers.length > 1 && (
-          <div className="w-full max-w-lg mb-3 p-3 rounded-2xl bg-slate-900/90 border border-purple-800/60 flex items-center justify-between gap-3 text-xs">
-            <span className="text-purple-300 font-bold flex items-center gap-1.5">
-              <Users className="w-3.5 h-3.5" />
-              <span>Switch Customer Account:</span>
-            </span>
-            <div className="relative inline-flex items-center">
-              <select
-                value={customer?.id || ''}
-                onChange={e => handleSelectCustomer(e.target.value)}
-                className="appearance-none bg-purple-950/80 text-purple-200 border border-purple-600/50 rounded-xl px-3 py-1 pr-7 text-xs font-bold focus:outline-none cursor-pointer"
-              >
-                {allCustomers.map(c => (
-                  <option key={c.id} value={c.id} className="bg-slate-900 text-slate-100">
-                    {c.name} ({c.phoneNumber})
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="w-3 h-3 text-purple-300 absolute right-2 pointer-events-none" />
-            </div>
-          </div>
-        )}
-        <div className="glass-panel rounded-3xl p-8 max-w-lg w-full text-center border border-amber-500/40 bg-slate-950/90 shadow-2xl space-y-5 animate-in zoom-in-95">
-          <div className="w-16 h-16 rounded-3xl bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center justify-center mx-auto shadow-lg shadow-amber-950/50">
-            <Lock className="w-8 h-8 text-amber-400 animate-pulse" />
-          </div>
-
-          <div className="space-y-2">
-            <span className="text-[10px] font-extrabold uppercase tracking-widest px-2.5 py-1 rounded-full bg-amber-950/80 text-amber-300 border border-amber-800/80">
-              Audit & Ledger Reconciliation
-            </span>
-            <h2 className="text-xl font-extrabold text-slate-100">
-              Passbook Temporarily Closed for Entry Correction
-            </h2>
-            <p className="text-xs text-slate-300 leading-relaxed">
-              Station Admin is currently auditing and adjusting fuel transaction entries for <strong>{customer.name}</strong>. 
-              Your digital passbook will reopen automatically once data corrections are finalized.
-            </p>
-          </div>
-
-          {customer.lockReason && (
-            <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 text-xs text-amber-200/90">
-              <span className="font-bold text-slate-400">Admin Note: </span>
-              {customer.lockReason}
-            </div>
-          )}
-
-          <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800/80 space-y-2 text-xs">
-            <p className="text-slate-400">Need urgent fuel statement or diesel refill?</p>
-            <a
-              href="tel:+919159054084"
-              className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold text-xs shadow-lg"
-            >
-              <Fuel className="w-4 h-4" />
-              <span>Call Station Admin: +91 91590 54084</span>
-            </a>
-          </div>
-
-          <p className="text-[10px] text-slate-500">
-            Checking status automatically every 3 seconds...
-          </p>
-        </div>
-      </div>
-    );
-  }
 
   // 2. PENDING Admin Approval
   if (customer.accessStatus === 'PENDING') {
@@ -384,7 +319,6 @@ export const CustomerPortal: React.FC = () => {
     link.click();
     document.body.removeChild(link);
   };
-
   return (
     <div className="space-y-6 pb-12">
       {/* Customer Header */}
@@ -435,13 +369,15 @@ export const CustomerPortal: React.FC = () => {
             </p>
           </div>
 
-          <div className="text-left sm:text-right">
-            <span className="text-xs text-slate-400 uppercase font-bold tracking-wider">
-              Current Outstanding Due
-            </span>
-            <p className="text-3xl sm:text-4xl font-black font-mono-numbers text-rose-400 mt-1">
-              ₹{customer.currentBalance.toFixed(2)}
-            </p>
+          <div className="text-left sm:text-right space-y-2">
+            <div>
+              <span className="text-xs text-slate-400 uppercase font-bold tracking-wider">
+                Current Outstanding Due
+              </span>
+              <p className="text-3xl sm:text-4xl font-black font-mono-numbers text-rose-400 mt-1">
+                ₹{customer.currentBalance.toFixed(2)}
+              </p>
+            </div>
           </div>
         </div>
       </div>

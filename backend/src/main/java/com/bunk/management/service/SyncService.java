@@ -29,6 +29,7 @@ public class SyncService {
     private final AuditLogRepository auditLogRepository;
     private final ExpenseEntryRepository expenseEntryRepository;
     private final TankStockEntryRepository tankStockEntryRepository;
+    private final AgencyRepository agencyRepository;
     private final SseService sseService;
 
     @Transactional
@@ -102,6 +103,7 @@ public class SyncService {
                 case "PAYMENT_REQUEST" -> paymentRequestRepository.deleteById(item.getSyncId());
                 case "EXPENSE" -> expenseEntryRepository.deleteById(item.getSyncId());
                 case "TANK_STOCK" -> tankStockEntryRepository.deleteById(item.getSyncId());
+                case "AGENCY" -> agencyRepository.deleteById(item.getSyncId());
             }
             return;
         }
@@ -388,6 +390,25 @@ public class SyncService {
                 stock.setTimestamp(LocalDateTime.now());
                 tankStockEntryRepository.save(stock);
             }
+            case "AGENCY" -> {
+                String id = item.getSyncId();
+                String code = (String) p.get("code");
+                String name = (String) p.get("name");
+                String ownerName = (String) p.get("ownerName");
+                String phone = (String) p.get("phone");
+                String address = (String) p.get("address");
+
+                Agency agency = agencyRepository.findById(id).orElseGet(() -> Agency.builder().id(id).build());
+                agency.setCode(code);
+                agency.setName(name);
+                agency.setOwnerName(ownerName);
+                agency.setPhone(phone);
+                agency.setAddress(address);
+                if (agency.getCreatedAt() == null) {
+                    agency.setCreatedAt(LocalDateTime.now());
+                }
+                agencyRepository.save(agency);
+            }
         }
     }
 
@@ -403,6 +424,7 @@ public class SyncService {
         status.put("paymentRequestsCount", paymentRequestRepository.count());
         status.put("expenseEntriesCount", expenseEntryRepository.count());
         status.put("tankStocksCount", tankStockEntryRepository.count());
+        status.put("agenciesCount", agencyRepository.count());
         status.put("auditLogsCount", auditLogRepository.count());
         status.put("cloudConnected", true);
         status.put("serverTime", LocalDateTime.now().toString());
@@ -421,6 +443,7 @@ public class SyncService {
         allData.put("paymentRequests", paymentRequestRepository.findAll());
         allData.put("expenseEntries", expenseEntryRepository.findAll());
         allData.put("tankStocks", tankStockEntryRepository.findAll());
+        allData.put("agencies", agencyRepository.findAll());
         return allData;
     }
 
@@ -471,6 +494,7 @@ public class SyncService {
         expenseEntryRepository.deleteAll();
         tankStockEntryRepository.deleteAll();
         auditLogRepository.deleteAll();
+        agencyRepository.deleteAll();
         userRepository.deleteAll();
 
         sseService.broadcast("SYNC_UPDATE", Map.of("action", "RESET_ENTIRE_DATABASE", "timestamp", System.currentTimeMillis()));

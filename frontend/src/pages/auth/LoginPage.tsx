@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { useAgency } from '../../context/AgencyContext';
 import { db } from '../../db/db';
 import { syncEngine } from '../../sync/syncEngine';
 import { User, Customer } from '../../types';
@@ -16,7 +17,8 @@ import {
   ArrowLeft,
   ShieldAlert,
   Eye,
-  EyeOff
+  EyeOff,
+  Building2
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -25,6 +27,7 @@ import { getTotpUri, ADMIN_TOTP_SECRET, verifyTotpCode } from '../../services/to
 
 export const LoginPage: React.FC = () => {
   const { validateUser, completeLogin, refreshUsers, allUsers } = useAuth();
+  const { currentAgency, clearAgency } = useAgency();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -129,6 +132,31 @@ export const LoginPage: React.FC = () => {
       <div className="absolute bottom-10 right-1/4 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl pointer-events-none"></div>
 
       <div className="w-full max-w-lg glass-panel rounded-3xl p-6 sm:p-8 border border-slate-800 shadow-2xl relative z-10 space-y-5 animate-in fade-in zoom-in-95">
+        {/* Active Agency & Back / Change Agency Navigation */}
+        <div className="flex items-center justify-between pb-3 border-b border-slate-200/80">
+          <button
+            type="button"
+            onClick={clearAgency}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 text-xs font-bold border border-slate-200 hover:border-emerald-300 transition-all shadow-sm active:scale-95 group cursor-pointer"
+            title="Go back to select another agency"
+          >
+            <ArrowLeft className="w-4 h-4 text-slate-500 group-hover:text-emerald-600 group-hover:-translate-x-0.5 transition-transform" />
+            <span>Change Agency</span>
+          </button>
+
+          {currentAgency && (
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 border border-slate-200 text-slate-800 text-xs font-semibold max-w-[55%]">
+              <Building2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+              <span className="truncate font-bold text-slate-800">{currentAgency.name}</span>
+              {currentAgency.code && (
+                <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-mono text-[10px] font-extrabold border border-emerald-300/60 shrink-0">
+                  {currentAgency.code}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+
         {/* Station Image Banner */}
         <div className="text-center space-y-2">
           <div className="relative h-24 w-full rounded-2xl overflow-hidden mb-2 border border-slate-700/80 shadow-inner group">
@@ -453,7 +481,18 @@ export const LoginPage: React.FC = () => {
           </form>
         )}
 
-
+        {/* Footer: Quick Switch Agency */}
+        <div className="pt-2 border-t border-slate-200/80 text-center">
+          <button
+            type="button"
+            onClick={clearAgency}
+            className="text-xs text-slate-600 hover:text-emerald-600 font-semibold transition-colors inline-flex items-center gap-1.5 py-1 px-3 rounded-lg hover:bg-slate-100 cursor-pointer"
+          >
+            <Building2 className="w-3.5 h-3.5 text-slate-400" />
+            <span>Wrong station?</span>
+            <span className="text-emerald-600 font-bold underline">Change Agency</span>
+          </button>
+        </div>
       </div>
     </div>
   );

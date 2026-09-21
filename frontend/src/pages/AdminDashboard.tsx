@@ -24,9 +24,7 @@ import {
   Gauge,
   Layers,
   Droplets,
-  Lock,
-  Unlock,
-  ShieldAlert
+  ShieldCheck
 } from 'lucide-react';
 import { syncEngine } from '../sync/syncEngine';
 import { CreditModal } from '../components/CreditModal';
@@ -96,22 +94,6 @@ export const AdminDashboard: React.FC<{ onNavigate: (page: string) => void }> = 
     setRequestModalOpen(true);
   };
 
-  const handleToggleCustomerAccess = async (cust: Customer) => {
-    const isCurrentlyLocked = cust.accessStatus === 'LOCKED';
-    const newStatus = isCurrentlyLocked ? 'ACTIVE' : 'LOCKED';
-    const lockReason = isCurrentlyLocked ? undefined : 'Ledger Audit & Transaction Verification in Progress';
-
-    const updatedCust: Customer = {
-      ...cust,
-      accessStatus: newStatus,
-      lockReason: lockReason,
-      synced: false
-    };
-
-    await db.customers.put(updatedCust);
-    await syncEngine.enqueue('CUSTOMER', 'CREATE', cust.id, updatedCust);
-    await loadData();
-  };
 
   return (
     <div className="space-y-6 pb-12">
@@ -273,7 +255,7 @@ export const AdminDashboard: React.FC<{ onNavigate: (page: string) => void }> = 
               <div className="flex items-center gap-2">
                 <h3 className="font-black text-slate-900 text-sm sm:text-base">Shift-End Fuel Stock (ATG & Tank Dip)</h3>
                 <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 border border-purple-200 flex items-center gap-1">
-                  <Lock className="w-2.5 h-2.5" />
+                  <ShieldCheck className="w-2.5 h-2.5" />
                   Admin Only
                 </span>
               </div>
@@ -521,7 +503,6 @@ export const AdminDashboard: React.FC<{ onNavigate: (page: string) => void }> = 
               <tr className="border-b border-slate-800 text-slate-400 font-bold uppercase tracking-wider">
                 <th className="pb-3 px-3">Customer / Fleet</th>
                 <th className="pb-3 px-3">Phone</th>
-                <th className="pb-3 px-3 text-center">Portal Access</th>
                 <th className="pb-3 px-3 text-right">Total Credit</th>
                 <th className="pb-3 px-3 text-right">Total Paid</th>
                 <th className="pb-3 px-3 text-right">Outstanding Balance</th>
@@ -530,51 +511,12 @@ export const AdminDashboard: React.FC<{ onNavigate: (page: string) => void }> = 
             </thead>
             <tbody className="divide-y divide-slate-800/60 font-medium">
               {customers.map(c => {
-                const isLocked = c.accessStatus === 'LOCKED';
                 return (
                   <tr key={c.id} className="hover:bg-slate-900/40 transition-all">
                     <td className="py-3 px-3 font-semibold text-slate-200">
-                      <div className="flex items-center gap-2">
-                        <span>{c.name}</span>
-                        {isLocked && (
-                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-800 flex items-center gap-1">
-                            <Lock className="w-2.5 h-2.5" />
-                            Audit Lock
-                          </span>
-                        )}
-                      </div>
+                      <span>{c.name}</span>
                     </td>
                     <td className="py-3 px-3 text-slate-400 font-mono-numbers">{c.phoneNumber}</td>
-                    <td className="py-3 px-3 text-center">
-                      <button
-                        onClick={() => handleToggleCustomerAccess(c)}
-                        title={isLocked ? 'Click to Open Customer Portal Access' : 'Click to Lock Customer Portal for Data Audit/Correction'}
-                        className={`px-2 py-1 rounded-full text-[10px] font-extrabold border transition-all inline-flex items-center gap-1 shadow-sm ${
-                          isLocked
-                            ? 'bg-rose-950 text-rose-300 border-rose-700 hover:bg-rose-900'
-                            : c.accessStatus === 'PENDING'
-                            ? 'bg-amber-950 text-amber-300 border-amber-700 hover:bg-amber-900'
-                            : 'bg-emerald-950 text-emerald-300 border-emerald-700 hover:bg-emerald-900'
-                        }`}
-                      >
-                        {isLocked ? (
-                          <>
-                            <Lock className="w-3 h-3 text-rose-400" />
-                            <span>LOCKED (Audit)</span>
-                          </>
-                        ) : c.accessStatus === 'PENDING' ? (
-                          <>
-                            <Clock className="w-3 h-3 text-amber-400" />
-                            <span>PENDING (Approve)</span>
-                          </>
-                        ) : (
-                          <>
-                            <Unlock className="w-3 h-3 text-emerald-400" />
-                            <span>OPEN (Active)</span>
-                          </>
-                        )}
-                      </button>
-                    </td>
                     <td className="py-3 px-3 text-right font-mono-numbers text-slate-300">
                       ₹{c.totalCredit.toFixed(2)}
                     </td>
@@ -588,19 +530,6 @@ export const AdminDashboard: React.FC<{ onNavigate: (page: string) => void }> = 
                     </td>
                     <td className="py-3 px-3 text-center">
                       <div className="flex items-center justify-center gap-1.5">
-                        {/* Lock / Unlock Toggle Action */}
-                        <button
-                          onClick={() => handleToggleCustomerAccess(c)}
-                          className={`px-2 py-1 rounded-lg text-[11px] font-bold border transition-all flex items-center gap-1 ${
-                            isLocked
-                              ? 'bg-emerald-950/80 hover:bg-emerald-900 border-emerald-700 text-emerald-300'
-                              : 'bg-slate-900 hover:bg-rose-950/60 border-slate-700 hover:border-rose-700 text-slate-300 hover:text-rose-300'
-                          }`}
-                          title={isLocked ? 'Open Access to Customer' : 'Lock Customer Portal for Correction'}
-                        >
-                          {isLocked ? <Unlock className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
-                          <span>{isLocked ? 'Open Access' : 'Lock for Audit'}</span>
-                        </button>
 
                         {c.currentBalance > 0 && (
                           <button
@@ -616,7 +545,7 @@ export const AdminDashboard: React.FC<{ onNavigate: (page: string) => void }> = 
                             setTargetCustomer(c);
                             setCreditModalOpen(true);
                           }}
-                          className="px-2 py-1 rounded-lg bg-sky-950/60 hover:bg-sky-900/60 border border-sky-800/60 text-sky-300 text-[11px] font-bold transition-all"
+                          className="px-2.5 py-1 rounded-lg bg-sky-950/60 hover:bg-sky-900/60 border border-sky-800/60 text-sky-300 text-[11px] font-bold transition-all"
                         >
                           + Credit
                         </button>
@@ -625,7 +554,7 @@ export const AdminDashboard: React.FC<{ onNavigate: (page: string) => void }> = 
                             setTargetCustomer(c);
                             setPaymentModalOpen(true);
                           }}
-                          className="px-2 py-1 rounded-lg bg-emerald-950/60 hover:bg-emerald-900/60 border border-emerald-800/60 text-emerald-300 text-[11px] font-bold transition-all"
+                          className="px-2.5 py-1 rounded-lg bg-emerald-950/60 hover:bg-emerald-900/60 border border-emerald-800/60 text-emerald-300 text-[11px] font-bold transition-all"
                         >
                           + Pay
                         </button>

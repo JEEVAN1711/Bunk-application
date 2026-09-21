@@ -80,6 +80,7 @@ class SyncEngine {
       else if (entityType === 'PAYMENT_REQUEST') await db.paymentRequests.update(syncId, { synced: true });
       else if (entityType === 'EXPENSE') await db.expenseEntries.update(syncId, { synced: true });
       else if (entityType === 'TANK_STOCK') await db.tankStocks.update(syncId, { synced: true });
+      else if (entityType === 'AGENCY') await db.agencies.update(syncId, { synced: true });
     } catch {}
   }
 
@@ -359,7 +360,8 @@ class SyncEngine {
         closings,
         paymentRequests,
         expenses,
-        tankStocks
+        tankStocks,
+        agencies
       ] = await Promise.all([
         db.users.toArray(),
         db.customers.toArray(),
@@ -370,7 +372,8 @@ class SyncEngine {
         db.dutyClosings.toArray(),
         db.paymentRequests.toArray(),
         db.expenseEntries.toArray(),
-        db.tankStocks.toArray()
+        db.tankStocks.toArray(),
+        db.agencies.toArray()
       ]);
 
       const allItems: { syncId: string; entityType: SyncQueueItem['entityType']; action: SyncQueueItem['action']; timestamp: string; payload: any }[] = [];
@@ -385,6 +388,7 @@ class SyncEngine {
       paymentRequests.forEach(pr => allItems.push({ syncId: pr.id, entityType: 'PAYMENT_REQUEST', action: 'CREATE', timestamp: pr.sentAt || new Date().toISOString(), payload: pr }));
       expenses.forEach(e => allItems.push({ syncId: e.id, entityType: 'EXPENSE', action: 'CREATE', timestamp: e.timestamp || new Date().toISOString(), payload: e }));
       tankStocks.forEach(t => allItems.push({ syncId: t.id, entityType: 'TANK_STOCK', action: 'CREATE', timestamp: t.timestamp || new Date().toISOString(), payload: t }));
+      agencies.forEach(a => allItems.push({ syncId: a.id, entityType: 'AGENCY', action: 'CREATE', timestamp: a.createdAt || new Date().toISOString(), payload: a }));
 
       if (allItems.length === 0) {
         this.currentStatus = 'ONLINE';
@@ -510,7 +514,8 @@ class SyncEngine {
         db.dutyClosings,
         db.paymentRequests,
         db.expenseEntries,
-        db.tankStocks
+        db.tankStocks,
+        db.agencies
       ], async () => {
         // Hydrate Users
         if (Array.isArray(cloudData.users)) {
@@ -836,6 +841,23 @@ class SyncEngine {
               recordedByAdminId: st.recordedByAdminId,
               recordedByAdminName: st.recordedByAdminName,
               timestamp: st.timestamp,
+              synced: true
+            });
+          }
+        }
+
+        // Hydrate Agencies from Cloud DB
+        if (Array.isArray(cloudData.agencies)) {
+          for (const a of cloudData.agencies) {
+            if (!a.id || !a.name) continue;
+            await db.agencies.put({
+              id: a.id,
+              code: a.code || 'BUNK-01',
+              name: a.name,
+              ownerName: a.ownerName || '',
+              phone: a.phone || '',
+              address: a.address || '',
+              createdAt: a.createdAt || new Date().toISOString(),
               synced: true
             });
           }

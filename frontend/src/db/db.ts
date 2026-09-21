@@ -11,7 +11,8 @@ import {
   DutyClosing,
   PaymentRequest,
   SyncQueueItem,
-  ProductPricing
+  ProductPricing,
+  Agency
 } from '../types';
 
 export class BunkDatabase extends Dexie {
@@ -27,6 +28,7 @@ export class BunkDatabase extends Dexie {
   paymentRequests!: Table<PaymentRequest, string>;
   syncQueue!: Table<SyncQueueItem, number>;
   pricing!: Table<{ id: string; pricing: ProductPricing; stationName?: string }, string>;
+  agencies!: Table<Agency, string>;
 
   constructor() {
     super('BunkManagementDB');
@@ -43,6 +45,9 @@ export class BunkDatabase extends Dexie {
       paymentRequests: 'id, customerId, status, sentAt, synced',
       syncQueue: '++id, syncId, entityType, action, timestamp',
       pricing: 'id'
+    });
+    this.version(2).stores({
+      agencies: 'id, code, name, synced'
     });
   }
 }

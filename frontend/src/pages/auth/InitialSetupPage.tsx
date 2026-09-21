@@ -1,19 +1,21 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { useAgency } from '../../context/AgencyContext';
 import { useDuty } from '../../context/DutyContext';
 import { syncEngine } from '../../sync/syncEngine';
 import { db, restoreDemoCredentials, DEFAULT_PRICES } from '../../db/db';
-import { Fuel, ShieldCheck, CheckCircle2, UserCheck, Sparkles, Building2, Phone, Lock, User } from 'lucide-react';
+import { Fuel, ShieldCheck, CheckCircle2, UserCheck, Sparkles, Building2, Phone, Lock, User, ArrowLeft } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 export const InitialSetupPage: React.FC = () => {
   const { refreshUsers } = useAuth();
+  const { currentAgency, clearAgency } = useAgency();
   const { updatePricing } = useDuty();
 
-  const [stationName, setStationName] = useState('');
-  const [fullName, setFullName] = useState('');
+  const [stationName, setStationName] = useState(currentAgency?.name || '');
+  const [fullName, setFullName] = useState(currentAgency?.ownerName || '');
   const [username, setUsername] = useState('');
-  const [phone, setPhone] = useState('');
+  const [phone, setPhone] = useState(currentAgency?.phone || '');
   const [password, setPassword] = useState('');
   const [photoUrl, setPhotoUrl] = useState('');
   const [petrolRate, setPetrolRate] = useState(DEFAULT_PRICES.PETROL.toString());
@@ -77,6 +79,31 @@ export const InitialSetupPage: React.FC = () => {
       <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl pointer-events-none"></div>
 
       <div className="w-full max-w-xl glass-panel rounded-3xl p-8 sm:p-10 border border-slate-800 shadow-2xl relative z-10 space-y-6 animate-in fade-in zoom-in-95 duration-300">
+        {/* Active Agency & Back / Change Agency Navigation */}
+        <div className="flex items-center justify-between pb-3 border-b border-slate-200/80">
+          <button
+            type="button"
+            onClick={clearAgency}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 text-xs font-bold border border-slate-200 hover:border-emerald-300 transition-all shadow-sm active:scale-95 group cursor-pointer"
+            title="Go back to select another agency"
+          >
+            <ArrowLeft className="w-4 h-4 text-slate-500 group-hover:text-emerald-600 group-hover:-translate-x-0.5 transition-transform" />
+            <span>Change Agency</span>
+          </button>
+
+          {currentAgency && (
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 border border-slate-200 text-slate-800 text-xs font-semibold max-w-[55%]">
+              <Building2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+              <span className="truncate font-bold text-slate-800">{currentAgency.name}</span>
+              {currentAgency.code && (
+                <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-mono text-[10px] font-extrabold border border-emerald-300/60 shrink-0">
+                  {currentAgency.code}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+
         {/* Header */}
         <div className="text-center space-y-2">
           {/* Station Image Banner */}
